@@ -21,7 +21,39 @@
 ├── README.md         
   ```
 ## 2. 控制台应用整合
-
+- main.go
+```
+func main() {
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)))
+	app := NewCli(GitCommit, GitData)
+	ctx := opio.WithInterruptBlocker(context.Background())
+	if err := app.RunContext(ctx, os.Args); err != nil {
+		log.Error("Application failed")
+		os.Exit(1)
+	}
+}
+```
+- cli.go
+```
+func NewCli(GitCommit string, GitData string) *cli.App {
+	//flags := flags2.Flags
+	return &cli.App{
+		Version:              params.VersionWithCommit(GitCommit, GitData),
+		Description:          "An exchange wallet scanner services with rpc and rest api server",
+		EnableBashCompletion: true,
+		Commands: []*cli.Command{
+			{
+				Name:        "version",
+				Description: "Show project version",
+				Action: func(ctx *cli.Context) error {
+					cli.ShowVersion(ctx)
+					return nil
+				},
+			},
+		},
+	}
+}
+```
 ## 3. rpc 搭建
 
 ## 4. 数据库设计、gorm 搭建
