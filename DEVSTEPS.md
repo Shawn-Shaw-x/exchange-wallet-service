@@ -54,12 +54,26 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 	}
 }
 ```
-## 3. rpc 搭建
+
+## 3. 数据库设计、gorm 搭建
+- Business(businessId,notifyUrl...): 注册商户表
+- Blocks(hash,parentHash,number...): 区块信息表
+- ReorgBlocks(hash,parentHash,number): 回滚区块表（回滚时处理交易使用）
+- Address(address,addressType,publicKey...): 钱包地址表
+- Balance(address,tokenAddress,balance,lockBalance...): 地址余额表
+- Deposit(from,to,amount,confirms,blockHash...): 充值表
+- Withdraw(from,to,amount,blockHash...): 提现表
+- Internals(from,to,amount,blockHash...): 内部交易表（热转冷、冷转热）
+- Transactions(from,to,amount,fee,hash...): 交易流水表
+- Token(tokenAddress,decimals,collectAmount...): token合约表
+
+- 数据库迁移脚本：`migrations` 文件夹中 
+- 执行数据库迁移：执行 `make` 编译程序，然后 `./exchange-wallet-service migrate`
+- 实现每一个表对应结构体、新增表、增删改查接口
+## 4. rpc 搭建
 - 编写 `exchange-wallet.proto`文件，定义消息和接口
 - `make protogo` 生成对应的 protobuf 代码
-- 
-## 4. 数据库设计、gorm 搭建
-
+-
 ## 5. 扫链同步器搭建
 
 ## 6. 充值业务实现

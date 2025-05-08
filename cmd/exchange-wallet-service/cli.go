@@ -1,9 +1,9 @@
 package main
 
 import (
-	"context"
-	"exchange-wallet-service/common/cliapp"
+	"exchange-wallet-service/common/opio"
 	"exchange-wallet-service/config"
+	"exchange-wallet-service/database"
 	flags2 "exchange-wallet-service/flags"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -32,31 +32,60 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 				},
 			},
 			{
-				Name:        "rpc",
+				Name:        "migrate",
 				Flags:       flags,
-				Description: "Run rpc services",
-				Action:      cliapp.LifecycleCmd(runRpc),
+				Description: "Run database migrations",
+				Action:      runMigrations,
 			},
+			//{
+			//	Name:        "rpc",
+			//	Flags:       flags,
+			//	Description: "Run rpc services",
+			//	Action:      cliapp.LifecycleCmd(runRpc),
+			//},
 		},
 	}
 }
 
-/*运行 gRPC 服务*/
-func runRpc(ctx *cli.Context, shutdown context.CancelFunc) (cliapp.Lifecycle, error) {
-	log.Info("starting rpc service...")
+/*数据库迁移命令，创建基础表*/
+func runMigrations(ctx *cli.Context) error {
+	ctx.Context = opio.CancelOnInterrupt(ctx.Context)
+	log.Info("starting migrations")
 	cfg, err := config.LoadConfig(ctx)
 	if err != nil {
-		log.Error("failed to load config", "error", err)
-		return nil, err
+		log.Error("failed to load config", "err", err)
+		return err
 	}
-	grpcServer := &config.WalletBusinessConfig{
-		GrpcHostName: cfg.RpcServer.Host,
-		GrpcPort:     cfg.RpcServer.Port,
+	db, err := database.NewDB(ctx.Context, cfg.MasterDB)
+	if err != nil {
+		log.Error("failed to connect database", "err", err)
+		return err
 	}
-	/*todo  1.数据库*/
-	var db database.DB = nil
-	/* todo 2.chains-union-rpc 连接客户端*/
-
-	/*todo grpc 服务启动*/
-	return nil, nil
+	defer func(db *database.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Error("failed to close database connection", "err", err)
+		}
+	}(db)
+	return db.ExecuteSQLMigration(cfg.Migrations)
 }
+
+///*运行 gRPC 服务*/
+//func runRpc(ctx *cli.Context, shutdown context.CancelFunc) (cliapp.Lifecycle, error) {
+//	log.Info("starting rpc service...")
+//	cfg, err := config.LoadConfig(ctx)
+//	if err != nil {
+//		log.Error("failed to load config", "error", err)
+//		return nil, err
+//	}
+//	grpcServer := &config.WalletBusinessConfig{
+//		GrpcHostName: cfg.RpcServer.Host,
+//		GrpcPort:     cfg.RpcServer.Port,
+//	}
+//	/*todo  1.数据库*/
+//	var db database.DB = nil
+//	/* todo 2.chains-union-rpc 连接客户端*/
+//
+//	/*todo grpc 服务启动*/
+//	return nil, nil
+//}

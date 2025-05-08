@@ -1,13 +1,5 @@
 package cache
 
-//
-//import (
-//	"sync"
-//
-//	"github.com/dgraph-io/ristretto"
-//	"github.com/ethereum/go-ethereum/log"
-//)
-//
 //// 定义一个全局的Cache实例
 //var globalCache *ristretto.Cache[string, *database.Addresses]
 //var once sync.Once
