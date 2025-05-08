@@ -23,7 +23,7 @@ go.work.sum
 
 # env file
 .idea
-./multichain-sync
-/multichain-sync
-*.multichain-sync
-multichain-sync
+./exchange-wallet-service
+/exchange-wallet-service
+*.exchange-wallet-service
+exchange-wallet-service
