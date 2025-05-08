@@ -55,7 +55,9 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 }
 ```
 ## 3. rpc 搭建
-
+- 编写 `exchange-wallet.proto`文件，定义消息和接口
+- `make protogo` 生成对应的 protobuf 代码
+- 
 ## 4. 数据库设计、gorm 搭建
 
 ## 5. 扫链同步器搭建
