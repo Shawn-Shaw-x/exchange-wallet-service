@@ -111,6 +111,6 @@ func runRpc(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lifecycl
 	}
 	log.Info("successfully connected to chains-union-rpc client", "chains-union-rpc client", &rpcClient)
 
-	/* 3. grpc 服务启动*/
+	/*3. grpc 服务启动 */
 	return services.NewWalletBusinessService(grpcServerConfig, db, rpcClient)
 }

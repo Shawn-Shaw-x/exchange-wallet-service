@@ -12,6 +12,7 @@ type ChainsUnionRpcClient struct {
 	ChainsRpcClient chainsunion.ChainsUnionServiceClient
 }
 
+/*连接外部chains-union-rpc客户端*/
 func NewChainsUnionRpcClient(ctx context.Context, rpc chainsunion.ChainsUnionServiceClient, chainName string) (*ChainsUnionRpcClient, error) {
 	log.Info("NewChainsUnionRpcClient", "chainName", chainName)
 	return &ChainsUnionRpcClient{Ctx: ctx, ChainsRpcClient: rpc, ChainName: chainName}, nil

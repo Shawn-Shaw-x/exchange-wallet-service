@@ -26,6 +26,7 @@ type WalletBusinessService struct {
 	stopped              atomic.Bool
 }
 
+/*新建本地 rpc 服务*/
 func NewWalletBusinessService(config *config.WalletBusinessConfig, db *database.DB, rpcClient *rpcclient.ChainsUnionRpcClient) (*WalletBusinessService, error) {
 	log.Info("new WalletBusinessService success", "config", config, "db", db)
 	return &WalletBusinessService{
@@ -35,6 +36,7 @@ func NewWalletBusinessService(config *config.WalletBusinessConfig, db *database.
 	}, nil
 }
 
+/*cli.app的的生命周期管理管理，会自动启动 start */
 func (w *WalletBusinessService) Start(ctx context.Context) error {
 	go func(w *WalletBusinessService) {
 		addr := fmt.Sprintf("%s:%d", w.WalletBusinessConfig.GrpcHostName, w.WalletBusinessConfig.GrpcPort)

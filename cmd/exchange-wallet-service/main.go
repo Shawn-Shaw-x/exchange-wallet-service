@@ -16,6 +16,7 @@ var (
 func main() {
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stdout, log.LevelInfo, true)))
 	app := NewCli(GitCommit, GitData)
+	/*可中断*/
 	ctx := opio.WithInterruptBlocker(context.Background())
 	if err := app.RunContext(ctx, os.Args); err != nil {
 		log.Error("Application failed")
