@@ -30,11 +30,25 @@ type BalancesView interface {
 type BalancesDB interface {
 	BalancesView
 
+	StoreBalances(string, []*Balances) error
 	//todo
 }
 
 type balancesDB struct {
 	gorm *gorm.DB
+}
+
+/*批量余额存库*/
+func (db *balancesDB) StoreBalances(requestId string, balances []*Balances) error {
+	valueList := make([]*Balances, len(balances))
+	for i, balance := range balances {
+		if balance != nil {
+			balance.Address = common.HexToAddress(balance.Address.Hex())
+			balance.TokenAddress = common.HexToAddress(balance.TokenAddress.Hex())
+			valueList[i] = balance
+		}
+	}
+	return db.gorm.Table("balances_"+requestId).CreateInBatches(&valueList, len(valueList)).Error
 }
 
 func (db *balancesDB) QueryWalletBalanceByTokenAndAddress(requestId string, addressType constant.AddressType, address, tokenAddress common.Address) (*Balances, error) {

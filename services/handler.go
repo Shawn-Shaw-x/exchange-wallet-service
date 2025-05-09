@@ -3,10 +3,13 @@ package services
 import (
 	"context"
 	"exchange-wallet-service/database"
+	"exchange-wallet-service/database/constant"
 	"exchange-wallet-service/database/dynamic"
 	exchange_wallet_go "exchange-wallet-service/protobuf/exchange-wallet-go"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/google/uuid"
+	"math/big"
 	"time"
 )
 
@@ -41,8 +44,72 @@ func (w *WalletBusinessService) BusinessRegister(ctx context.Context, request *e
 
 /*批量公钥转地址*/
 func (w *WalletBusinessService) ExportAddressByPublicKeys(ctx context.Context, request *exchange_wallet_go.ExportAddressRequest) (*exchange_wallet_go.ExportAddressResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	var (
+		retAddresses []*exchange_wallet_go.Address
+		dbAddresses  []*database.Address
+		balances     []*database.Balances
+	)
+
+	for _, value := range request.PublicKeys {
+		address := w.chainUnionClient.ExportAddressByPublicKey("", value.PublicKey)
+		item := &exchange_wallet_go.Address{
+			Type:    value.Type,
+			Address: address,
+		}
+		parseAddressType, err := constant.ParseAddressType(value.Type)
+		if err != nil {
+			log.Error("failed to parse addressType", "addressType", value.Type, "err", err)
+			return nil, err
+		}
+
+		/*地址表*/
+		dbAddress := &database.Address{
+			GUID:        uuid.New(),
+			Address:     common.HexToAddress(value.PublicKey),
+			AddressType: parseAddressType,
+			PublicKey:   value.PublicKey,
+			Timestamp:   uint64(time.Now().Unix()),
+		}
+		dbAddresses = append(dbAddresses, dbAddress)
+
+		/*余额表*/
+		balanceItem := &database.Balances{
+			GUID:         uuid.New(),
+			Address:      common.HexToAddress(value.PublicKey),
+			TokenAddress: common.Address{},
+			AddressType:  parseAddressType,
+			Balance:      big.NewInt(0),
+			LockBalance:  big.NewInt(0),
+			Timestamp:    uint64(time.Now().Unix()),
+		}
+		balances = append(balances, balanceItem)
+
+		/*返回地址*/
+		retAddresses = append(retAddresses, item)
+	}
+	/*地址存库*/
+	err := w.db.Address.StoreAddresses(request.RequestId, dbAddresses)
+	if err != nil {
+		return &exchange_wallet_go.ExportAddressResponse{
+			Code: exchange_wallet_go.ReturnCode_ERROR,
+			Msg:  "store address to db fail",
+		}, nil
+	}
+	/*余额存库*/
+	err = w.db.Balances.StoreBalances(request.RequestId, balances)
+	if err != nil {
+		return &exchange_wallet_go.ExportAddressResponse{
+			Code: exchange_wallet_go.ReturnCode_ERROR,
+			Msg:  "store balance to db fail",
+		}, nil
+	}
+
+	return &exchange_wallet_go.ExportAddressResponse{
+		Code:      exchange_wallet_go.ReturnCode_SUCCESS,
+		Msg:       "generate addresses success",
+		Addresses: retAddresses,
+	}, nil
+
 }
 
 /*构建未签名交易*/
