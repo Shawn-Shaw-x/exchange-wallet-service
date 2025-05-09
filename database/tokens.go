@@ -23,11 +23,19 @@ type TokensView interface {
 
 type TokensDB interface {
 	TokensView
+
+	StoreTokens(string, []Tokens) error
 	/*todo*/
 }
 
 type tokensDB struct {
 	gorm *gorm.DB
+}
+
+/*存代币合约地址*/
+func (db *tokensDB) StoreTokens(requestId string, tokenList []Tokens) error {
+	result := db.gorm.Table("tokens_"+requestId).CreateInBatches(&tokenList, len(tokenList))
+	return result.Error
 }
 
 func NewTokensDB(db *gorm.DB) TokensDB {

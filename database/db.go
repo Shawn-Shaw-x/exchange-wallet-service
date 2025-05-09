@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"time"
 
-	_ "exchange-wallet-service/database/utils/serializers"
+	_ "exchange-wallet-service/database/utils/serializers" // 自动注册序列器
 )
 
 // DB 封装了 GORM 的数据库连接以及后续可能扩展的其他表接口。
@@ -92,6 +92,7 @@ func NewDB(ctx context.Context, dbConfig config.DBConfig) (*DB, error) {
 		Logger:                 newLogger,
 	}
 
+	/*重试策略*/
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	gormDbBox, err := retry.Do[*gorm.DB](context.Background(), 10, retryStrategy, func() (*gorm.DB, error) {
 		gormDb, err := gorm.Open(postgres.Open(dsn), &gormConfig)

@@ -132,6 +132,33 @@ func (w *WalletBusinessService) BuildSignedTransaction(ctx context.Context, requ
 
 /*设定支持的 token 合约*/
 func (w *WalletBusinessService) SetTokenAddress(ctx context.Context, request *exchange_wallet_go.SetTokenAddressRequest) (*exchange_wallet_go.SetTokenAddressResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	var (
+		tokenList []database.Tokens
+	)
+	for _, value := range request.TokenList {
+		CollectAmountBigInt, _ := new(big.Int).SetString(value.CollectAmount, 10)
+		ColdAmountBigInt, _ := new(big.Int).SetString(value.ColdAmount, 10)
+		token := database.Tokens{
+			GUID:          uuid.New(),
+			TokenAddress:  common.HexToAddress(value.Address),
+			Decimals:      uint8(value.Decimals),
+			TokenName:     value.TokenName,
+			CollectAmount: CollectAmountBigInt,
+			ColdAmount:    ColdAmountBigInt,
+			Timestamp:     uint64(time.Now().Unix()),
+		}
+		tokenList = append(tokenList, token)
+	}
+
+	/*token 合约存储*/
+	err := w.db.Tokens.StoreTokens(request.RequestId, tokenList)
+	if err != nil {
+		log.Error("failed to store tokens", "err", err)
+		return nil, err
+	}
+	return &exchange_wallet_go.SetTokenAddressResponse{
+		Code: exchange_wallet_go.ReturnCode_SUCCESS,
+		Msg:  "set token address success",
+	}, nil
+
 }
