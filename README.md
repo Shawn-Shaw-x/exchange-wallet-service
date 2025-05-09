@@ -1,5 +1,14 @@
 # exchange-wallet-service
 
+![Go Version](https://img.shields.io/badge/Go-1.20%2B-blue?logo=go)
+![Build](https://img.shields.io/badge/build-passing-brightgreen?logo=github-actions)
+![License](https://img.shields.io/github/license/Shawn-Shaw-x/exchange-wallet-service)
+![Stars](https://img.shields.io/github/stars/Shawn-Shaw-x/exchange-wallet-service?style=social)
+![Issues](https://img.shields.io/github/issues/Shawn-Shaw-x/exchange-wallet-service)
+![Last Commit](https://img.shields.io/github/last-commit/Shawn-Shaw-x/exchange-wallet-service)
+![Lines of Code](https://img.shields.io/tokei/lines/github/Shawn-Shaw-x/exchange-wallet-service)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Shawn-Shaw-x/exchange-wallet-service)](https://goreportcard.com/report/github.com/Shawn-Shaw-x/exchange-wallet-service)
+
 `exchange-wallet-service` 是一个基于 gRPC 和 PostgreSQL 构建的高性能钱包服务，支持交易所钱包 SaaS 化部署，为多项目方提供账户体系、链上交易扫描、充值提现管理、热冷钱包归集与划转等全功能解决方案。
 
 ps: 本钱包项目基于交易所钱包业务抽象、简化而来。添加多租户支持，可提供项目方 Sass 化支持
