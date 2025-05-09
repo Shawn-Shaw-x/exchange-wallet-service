@@ -18,7 +18,7 @@ import (
 
 // DB 封装了 GORM 的数据库连接以及后续可能扩展的其他表接口。
 type DB struct {
-	gorm         *gorm.DB
+	Gorm         *gorm.DB
 	Business     BusinessDB
 	Blocks       BlocksDB
 	ReorgBlocks  ReorgBlocksDB
@@ -33,7 +33,7 @@ type DB struct {
 
 // Close 关闭底层数据库连接。
 func (db *DB) Close() error {
-	sql, err := db.gorm.DB()
+	sql, err := db.Gorm.DB()
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (db *DB) ExecuteSQLMigration(migrationsFolder string) error {
 		if readErr != nil {
 			return errors.Wrap(readErr, fmt.Sprintf("failed to read SQL file %s", path))
 		}
-		execErr := db.gorm.Exec(string(fileContent)).Error
+		execErr := db.Gorm.Exec(string(fileContent)).Error
 		if execErr != nil {
 			return errors.Wrap(execErr, fmt.Sprintf("failed to execute SQL file %s", path))
 		}
@@ -104,7 +104,7 @@ func NewDB(ctx context.Context, dbConfig config.DBConfig) (*DB, error) {
 	}
 
 	db := &DB{
-		gorm:         gormDbBox,
+		Gorm:         gormDbBox,
 		Business:     NewBusinessDB(gormDbBox),
 		Blocks:       NewBlocksDB(gormDbBox),
 		ReorgBlocks:  NewReorgBlocksDB(gormDbBox),
