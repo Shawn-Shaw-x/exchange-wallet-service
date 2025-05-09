@@ -86,10 +86,10 @@ var (
 		Value:    8987,
 		Required: true,
 	}
-	ChainAccountRpcFlag = &cli.StringFlag{
-		Name:     "chain-account-rpc",
-		Usage:    "The host of chain account rpc",
-		EnvVars:  prefixEnvVars("CHAIN_ACCOUNT_RPC"),
+	ChainsUnionRpcFlag = &cli.StringFlag{
+		Name:     "chains-union-rpc",
+		Usage:    "The host of chains union rpc",
+		EnvVars:  prefixEnvVars("CHAINS_UNION_RPC"),
 		Required: true,
 	}
 
@@ -215,7 +215,7 @@ var requireFlags = []cli.Flag{
 	BlocksStepFlag,
 	RpcHostFlag,
 	RpcPortFlag,
-	ChainAccountRpcFlag,
+	ChainsUnionRpcFlag,
 	MetricsPortFlag,
 	MetricsHostFlag,
 	SlaveDbEnableFlag,

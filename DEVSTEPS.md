@@ -73,7 +73,10 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 ## 4. rpc 搭建
 - 编写 `exchange-wallet.proto`文件，定义消息和接口
 - `make protogo` 生成对应的 protobuf 代码
--
+- 搭建对接 `chains-union-rpc` 的 `client`(需先把`chains-union-rpc` 的 protobuf 代码复制过来)
+- 搭建 `services`，新建包含 `db、rpcclient`、的 `grpc`，对接进 `urfave/cli` 的程序里，启动 `grpc` 服务
+- 编写捕获 `panic` 的拦截器，传入给 grpc 处理
+- 此程序提供的接口写在 `handler.go`
 ## 5. 扫链同步器搭建
 
 ## 6. 充值业务实现

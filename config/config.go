@@ -16,16 +16,16 @@ const (
 )
 
 type Config struct {
-	Migrations      string
-	ChainNode       ChainNodeConfig
-	MasterDB        DBConfig
-	SlaveDB         DBConfig
-	SlaveDbEnable   bool
-	ApiCacheEnable  bool
-	CacheConfig     CacheConfig
-	RpcServer       ServerConfig
-	MetricsServer   ServerConfig
-	ChainAccountRpc string
+	Migrations     string
+	ChainNode      ChainNodeConfig
+	MasterDB       DBConfig
+	SlaveDB        DBConfig
+	SlaveDbEnable  bool
+	ApiCacheEnable bool
+	CacheConfig    CacheConfig
+	RpcServer      ServerConfig
+	MetricsServer  ServerConfig
+	ChainsUnionRpc string
 }
 
 type ChainNodeConfig struct {
@@ -85,8 +85,8 @@ func LoadConfig(cliCtx *cli.Context) (Config, error) {
 
 func NewConfig(ctx *cli.Context) Config {
 	return Config{
-		Migrations:      ctx.String(flags.MigrationsFlag.Name),
-		ChainAccountRpc: ctx.String(flags.ChainAccountRpcFlag.Name),
+		Migrations:     ctx.String(flags.MigrationsFlag.Name),
+		ChainsUnionRpc: ctx.String(flags.ChainsUnionRpcFlag.Name),
 		ChainNode: ChainNodeConfig{
 			ChainId:              ctx.Uint64(flags.ChainIdFlag.Name),
 			ChainName:            ctx.String(flags.ChainNameFlag.Name),
