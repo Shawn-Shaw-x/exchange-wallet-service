@@ -18,9 +18,17 @@ import (
 
 // DB 封装了 GORM 的数据库连接以及后续可能扩展的其他表接口。
 type DB struct {
-	gorm     *gorm.DB
-	Business BusinessDB
-	/*todo other tables*/
+	gorm         *gorm.DB
+	Business     BusinessDB
+	Blocks       BlocksDB
+	ReorgBlocks  ReorgBlocksDB
+	Address      AddressDB
+	Balances     BalancesDB
+	Deposits     DepositsDB
+	Withdraw     WithdrawDB
+	Internals    InternalsDB
+	Transactions TransactionsDB
+	Tokens       TokensDB
 }
 
 // Close 关闭底层数据库连接。
@@ -96,9 +104,17 @@ func NewDB(ctx context.Context, dbConfig config.DBConfig) (*DB, error) {
 	}
 
 	db := &DB{
-		gorm:     gormDbBox,
-		Business: NewBusinessDB(gormDbBox),
-		/*todo other tables*/
+		gorm:         gormDbBox,
+		Business:     NewBusinessDB(gormDbBox),
+		Blocks:       NewBlocksDB(gormDbBox),
+		ReorgBlocks:  NewReorgBlocksDB(gormDbBox),
+		Address:      NewAddressDB(gormDbBox),
+		Balances:     NewBalancesDB(gormDbBox),
+		Deposits:     NewDepositsDB(gormDbBox),
+		Withdraw:     NewDepositsDB(gormDbBox),
+		Internals:    NewInternalsDB(gormDbBox),
+		Transactions: NewTransactionsDB(gormDbBox),
+		Tokens:       NewTokensDB(gormDbBox),
 	}
 	return db, nil
 }
