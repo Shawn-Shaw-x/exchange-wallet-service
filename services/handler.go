@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"math/big"
 	"time"
 )
@@ -65,7 +66,7 @@ func (w *WalletBusinessService) ExportAddressByPublicKeys(ctx context.Context, r
 		/*地址表*/
 		dbAddress := &database.Address{
 			GUID:        uuid.New(),
-			Address:     common.HexToAddress(value.PublicKey),
+			Address:     common.HexToAddress(address),
 			AddressType: parseAddressType,
 			PublicKey:   value.PublicKey,
 			Timestamp:   uint64(time.Now().Unix()),
@@ -75,7 +76,7 @@ func (w *WalletBusinessService) ExportAddressByPublicKeys(ctx context.Context, r
 		/*余额表*/
 		balanceItem := &database.Balances{
 			GUID:         uuid.New(),
-			Address:      common.HexToAddress(value.PublicKey),
+			Address:      common.HexToAddress(address),
 			TokenAddress: common.Address{},
 			AddressType:  parseAddressType,
 			Balance:      big.NewInt(0),
@@ -87,23 +88,28 @@ func (w *WalletBusinessService) ExportAddressByPublicKeys(ctx context.Context, r
 		/*返回地址*/
 		retAddresses = append(retAddresses, item)
 	}
-	/*地址存库*/
-	err := w.db.Address.StoreAddresses(request.RequestId, dbAddresses)
-	if err != nil {
-		return &exchange_wallet_go.ExportAddressResponse{
-			Code: exchange_wallet_go.ReturnCode_ERROR,
-			Msg:  "store address to db fail",
-		}, nil
-	}
-	/*余额存库*/
-	err = w.db.Balances.StoreBalances(request.RequestId, balances)
-	if err != nil {
-		return &exchange_wallet_go.ExportAddressResponse{
-			Code: exchange_wallet_go.ReturnCode_ERROR,
-			Msg:  "store balance to db fail",
-		}, nil
-	}
 
+	err := w.db.Gorm.Transaction(func(tx *gorm.DB) error {
+		/*地址存库*/
+		err := w.db.Address.StoreAddresses(request.RequestId, dbAddresses)
+		if err != nil {
+			log.Error("failed to store addresses", "addresses", dbAddresses, "err", err)
+			return err
+		}
+		/*余额存库*/
+		err = w.db.Balances.StoreBalances(request.RequestId, balances)
+		if err != nil {
+			log.Error("failed to store balances", "err", err)
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return &exchange_wallet_go.ExportAddressResponse{
+			Code: exchange_wallet_go.ReturnCode_ERROR,
+			Msg:  "store  db fail" + err.Error(),
+		}, nil
+	}
 	return &exchange_wallet_go.ExportAddressResponse{
 		Code:      exchange_wallet_go.ReturnCode_SUCCESS,
 		Msg:       "generate addresses success",

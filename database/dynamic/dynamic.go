@@ -7,15 +7,21 @@ import (
 	"gorm.io/gorm"
 )
 
+/*批量创建表*/
 func CreateTableFromTemplate(requestId string, db *database.DB) {
-	createTable("address", fmt.Sprintf("address_%s", requestId), db.Gorm)
-	createTable("balances", fmt.Sprintf("balances_%s", requestId), db.Gorm)
-	createTable("transactions", fmt.Sprintf("transactions_%s", requestId), db.Gorm)
-	createTable("deposits", fmt.Sprintf("deposits_%s", requestId), db.Gorm)
-	createTable("withdraws", fmt.Sprintf("withdraws_%s", requestId), db.Gorm)
-	createTable("internals", fmt.Sprintf("internals_%s", requestId), db.Gorm)
-	createTable("tokens", fmt.Sprintf("tokens_%s", requestId), db.Gorm)
-
+	err := db.Gorm.Transaction(func(tx *gorm.DB) error {
+		createTable("addresses", fmt.Sprintf("addresses_%s", requestId), db.Gorm)
+		createTable("balances", fmt.Sprintf("balances_%s", requestId), db.Gorm)
+		createTable("transactions", fmt.Sprintf("transactions_%s", requestId), db.Gorm)
+		createTable("deposits", fmt.Sprintf("deposits_%s", requestId), db.Gorm)
+		createTable("withdraws", fmt.Sprintf("withdraws_%s", requestId), db.Gorm)
+		createTable("internals", fmt.Sprintf("internals_%s", requestId), db.Gorm)
+		createTable("tokens", fmt.Sprintf("tokens_%s", requestId), db.Gorm)
+		return nil
+	})
+	if err != nil {
+		log.Error("failed to create dynamic table", "requestId", requestId, "err", err)
+	}
 }
 
 /*动态创建表*/

@@ -14,6 +14,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	_ "exchange-wallet-service/database/utils/serializers"
 )
 
 // DB 封装了 GORM 的数据库连接以及后续可能扩展的其他表接口。

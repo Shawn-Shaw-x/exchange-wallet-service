@@ -29,9 +29,13 @@ type addressDB struct {
 	gorm *gorm.DB
 }
 
-func (db *addressDB) StoreAddresses(s string, addresses []*Address) error {
-	//TODO implement me
-	panic("implement me")
+func (db *addressDB) StoreAddresses(requestId string, addressList []*Address) error {
+	for _, addr := range addressList {
+		addr.Address = common.HexToAddress(addr.Address.Hex())
+	}
+
+	return db.gorm.Table("addresses_"+requestId).
+		CreateInBatches(&addressList, len(addressList)).Error
 }
 
 func NewAddressDB(db *gorm.DB) AddressDB {
