@@ -128,7 +128,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 
   4. 转资金进这个地址
 
-  ![img.png](metamask.png)
+  ![img.png](images/metamask.png)
 
   5. exchange-wallet-service 构建未签名交易
   
