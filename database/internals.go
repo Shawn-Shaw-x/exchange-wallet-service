@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"exchange-wallet-service/database/constant"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
@@ -41,11 +42,15 @@ type Internals struct {
 }
 
 type InternalsView interface {
+	QueryInternalsById(requestId string, guid string) (*Internals, error)
 	// todo
 }
 
 type InternalsDB interface {
 	InternalsView
+
+	StoreInternal(string, *Internals) error
+	UpdateInternalById(requestId string, id string, signedTx string, status constant.TxStatus) error
 
 	// todo
 }
@@ -56,4 +61,49 @@ type internalsDB struct {
 
 func NewInternalsDB(db *gorm.DB) InternalsDB {
 	return &internalsDB{gorm: db}
+}
+
+/*存储内部交易*/
+func (db *internalsDB) StoreInternal(requestId string, internals *Internals) error {
+	return db.gorm.Table("internals_" + requestId).Create(internals).Error
+}
+
+/*查询内部交易*/
+func (db *internalsDB) QueryInternalsById(requestId string, guid string) (*Internals, error) {
+	var internalsEntity Internals
+	result := db.gorm.Table("internals_"+requestId).
+		Where("guid = ?", guid).
+		Take(&internalsEntity)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &internalsEntity, nil
+}
+
+/*更新内部交易（归集、热冷互转）*/
+func (db *internalsDB) UpdateInternalById(requestId string, id string, signedTx string, status constant.TxStatus) error {
+	updates := map[string]interface{}{
+		"status": status,
+	}
+
+	if signedTx != "" {
+		updates["tx_sign_hex"] = signedTx
+	}
+
+	result := db.gorm.Table("internals_"+requestId).
+		Where("guid = ?", id).
+		Updates(updates)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
 }

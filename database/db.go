@@ -27,7 +27,7 @@ type DB struct {
 	Address      AddressDB
 	Balances     BalancesDB
 	Deposits     DepositsDB
-	Withdraw     WithdrawDB
+	Withdraws    WithdrawDB
 	Internals    InternalsDB
 	Transactions TransactionsDB
 	Tokens       TokensDB
@@ -114,7 +114,7 @@ func NewDB(ctx context.Context, dbConfig config.DBConfig) (*DB, error) {
 		Address:      NewAddressDB(gormDbBox),
 		Balances:     NewBalancesDB(gormDbBox),
 		Deposits:     NewDepositsDB(gormDbBox),
-		Withdraw:     NewDepositsDB(gormDbBox),
+		Withdraws:    NewWithdrawsDB(gormDbBox),
 		Internals:    NewInternalsDB(gormDbBox),
 		Transactions: NewTransactionsDB(gormDbBox),
 		Tokens:       NewTokensDB(gormDbBox),
