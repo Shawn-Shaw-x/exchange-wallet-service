@@ -115,36 +115,45 @@ func NewCli(GitCommit string, GitData string) *cli.App {
   
   ![img.png](images/businessRegistRequest.png)
   ![img.png](images/businessRegistResponse.png)
+
   2. signature-machine 批量公钥生成
 
   ![img.png](images/keyPairRequest.png)
   ![img.png](images/keyPairResponse.png)
+
   3. exchange-wallet-service 公钥转地址
 
   ![img.png](images/addressRequest.png)
   ![img.png](images/addressResponse.png)
+
   4. 转资金进这个地址
 
   ![img.png](metamask.png)
+
   5. exchange-wallet-service 构建未签名交易
   
   ![img.png](images/unsignTransactionRequest.png)
   ![img.png](images/unsignTransactionResponse.png)
+
   6. signature-machine 中签名操作
   
   ![img.png](images/signatureRequest.png)
   ![img.png](images/signatureResponse.png)
+
   7. exchange-wallet-service 构建已签名交易
   
   ![img.png](images/signedTxRequest.png)
   ![img.png](images/signedTxResponse.png)
+
   8. chains-union-rpc 发送出去交易
   
   ![img.png](images/sendRequest.png)
   ![img.png](images/sendResponse.png)
+
   9. holesky 区块浏览器中查看这笔交易
   
   ![img.png](images/success.png)
+
 ## 6. 扫链同步器搭建
 
 ## 7. 充值业务实现
