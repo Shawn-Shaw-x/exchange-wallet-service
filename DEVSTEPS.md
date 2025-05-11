@@ -63,7 +63,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 - `Balance(address,tokenAddress,balance,lockBalance...)`: 地址余额表
 - `Deposit(from,to,amount,confirms,blockHash...)`: 充值表
 - `Withdraw(from,to,amount,blockHash...)`: 提现表
-- `Internals(from,to,amount,blockHash...)`: 内部交易表（热转冷、冷转热）
+- `Internals(from,to,amount,blockHash...)`: 内部交易表（归集、热转冷、冷转热）
 - `Transactions(from,to,amount,fee,hash...)`: 交易流水表
 - `Token(tokenAddress,decimals,collectAmount...)`: token合约表
 
@@ -164,5 +164,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 
 ## 10. 热转冷、冷转热业务实现
 
-## 11. 通知业务实现
+## 11. 回滚业务实现
+
+## 12. 通知业务实现
 

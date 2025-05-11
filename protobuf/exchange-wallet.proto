@@ -109,7 +109,7 @@ message SetTokenAddressResponse{
 service WalletBusinessServices{
   /*业务方注册*/
   rpc businessRegister(BusinessRegisterRequest) returns (BusinessRegisterResponse);
-  /*公钥导出*/
+  /*地址导出*/
   rpc exportAddressByPublicKeys(ExportAddressRequest) returns (ExportAddressResponse);
   /*构建未签名交易*/
   rpc buildUnSignTransaction(UnSignTransactionRequest) returns (UnSignTransactionResponse);
