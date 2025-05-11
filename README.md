@@ -111,6 +111,12 @@ make test
 ### 一笔 withdraw 交易的流程图
 ![img.png](images/withdrawTx.png)
 
+
+## 👬🏻 Participations
+
+- shawn_shaw: cola_ocean@foxmail.com
+- 0xManta: manta_0x@icloud.com
+
 ## 📄 License
 
 MIT © 2025 exchange-wallet-team
