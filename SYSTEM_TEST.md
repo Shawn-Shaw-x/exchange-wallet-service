@@ -1,3 +1,5 @@
+## 1. RPC 服务接口测试
+
 - **业务方注册**：
     1. 业务方携带自己的 `requestId` 进行注册，系统会根据 `requestId` 为其生成独立的 `address`、`balance`、`transactions`、`deposits`、`withdraw`、`internal`、`tokens` 表
     2. 注册成功后，其所有业务都需要携带 `requestId` 进行请求，数据独立在其自己的表中。
@@ -68,3 +70,11 @@
     9. holesky 区块浏览器中查看这笔交易
 
   ![img.png](images/success.png)
+
+## 2. 扫链同步器扫块测试
+- 启动扫链同步器服务
+
+![img.png](images/scanBlocksRequest.png)
+![img_1.png](images/scanBlocksResponse.png)
+
+## 3. 充值业务测试

@@ -3,7 +3,9 @@ package rpcclient
 import (
 	"context"
 	"exchange-wallet-service/rpcclient/chainsunion"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"math/big"
 )
 
 type ChainsUnionRpcClient struct {
@@ -35,4 +37,55 @@ func (c *ChainsUnionRpcClient) ExportAddressByPublicKey(typeOrVersion, publicKey
 		return ""
 	}
 	return address.Address
+}
+
+/*获取链上最新区块封装*/
+func (c *ChainsUnionRpcClient) GetBlockHeader(number *big.Int) (*BlockHeader, error) {
+	var height int64
+	if number == nil {
+		height = 0
+	} else {
+		height = number.Int64()
+	}
+	req := &chainsunion.BlockHeaderNumberRequest{
+		Chain:   c.ChainName,
+		Network: "mainnet",
+		Height:  height,
+	}
+	blockHeader, err := c.ChainsRpcClient.GetBlockHeaderByNumber(c.Ctx, req)
+	if err != nil {
+		log.Error("get latest block GetBlockHeaderByNumber fail", "err", err)
+		return nil, err
+	}
+	if blockHeader.Code == chainsunion.ReturnCode_ERROR {
+		log.Error("get latest block fail", "err", err)
+		return nil, err
+	}
+	blockNumber, _ := new(big.Int).SetString(blockHeader.BlockHeader.Number, 10)
+	header := &BlockHeader{
+		Hash:       common.HexToHash(blockHeader.BlockHeader.Hash),
+		ParentHash: common.HexToHash(blockHeader.BlockHeader.ParentHash),
+		Number:     blockNumber,
+		Timestamp:  blockHeader.BlockHeader.Time,
+	}
+	return header, nil
+}
+
+/*获取区块交易封装*/
+func (c *ChainsUnionRpcClient) GetBlockInfo(blockNumber *big.Int) ([]*chainsunion.BlockInfoTransactionList, error) {
+	req := &chainsunion.BlockNumberRequest{
+		Chain:  c.ChainName,
+		Height: blockNumber.Int64(),
+		ViewTx: true,
+	}
+	blockInfo, err := c.ChainsRpcClient.GetBlockByNumber(c.Ctx, req)
+	if err != nil {
+		log.Error("get block GetBlockByNumber fail", "err", err)
+		return nil, err
+	}
+	if blockInfo.Code == chainsunion.ReturnCode_ERROR {
+		log.Error("get block info fail", "err", err)
+		return nil, err
+	}
+	return blockInfo.Transactions, nil
 }
