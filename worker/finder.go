@@ -51,7 +51,7 @@ func NewFinder(synchronizer *BaseSynchronizer, cfg config.Config, shutdown conte
 	}, nil
 }
 
-/*启动交易发现器*/
+/*启动交易发现器（消费者）*/
 func (f *Finder) Start() error {
 	/*协程异步处理任务*/
 	f.tasks.Go(func() error {
@@ -84,6 +84,7 @@ func (f *Finder) Stop() error {
 提现：库中原来有记录（项目方提交的），更新状态为已发现
 归集：库中原来有记录（项目方提交的），更新状态为已发现
 热转冷、冷转热：库中原来有记录（项目方提交的），更新状态为已发现
+交易流水：入库 transaction 表
 */
 func (f *Finder) handleBatch(batch map[string]*BatchTransactions) error {
 	/*查出项目方列表*/

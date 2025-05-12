@@ -40,13 +40,13 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		return nil, err
 	}
 
-	/* 1. 新建处理同步器 worker*/
+	/* 1. 新建区块同步器（生成者）*/
 	synchronizer, err := NewSynchronizer(cfg, db, rpcClient, shutdown)
 	if err != nil {
 		log.Error("failed to create synchronizer", "err", err)
 		return nil, err
 	}
-	/*2. 新建交易发现器*/
+	/*2. 新建交易发现器（消费者）*/
 	finder, err := NewFinder(synchronizer, *cfg, shutdown)
 	if err != nil {
 		log.Error("failed to create finder", "err", err)

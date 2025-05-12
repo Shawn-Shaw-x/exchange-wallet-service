@@ -111,10 +111,11 @@ make test
 ### 一笔 withdraw 交易的流程图
 ![img.png](images/withdrawTx.png)
 
-### 扫链同步器流程图
+### 扫链同步器（生产者）流程图
 ![img.png](images/synchronizer.png)
 
-
+## 交易发现器（消费者）流程图
+![img.png](images/finder.png)
 ## 👬🏻 Partners
 
 - shawn_shaw: cola_ocean@foxmail.com
