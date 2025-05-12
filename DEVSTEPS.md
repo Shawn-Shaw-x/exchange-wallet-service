@@ -155,7 +155,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
   ![img.png](images/success.png)
 
 ## 6. 扫链同步器搭建
-  - worker 下，建立 synchronizer.go 文件
+  - `worker` 下，建立 `synchronizer.go` 文件
     核心数据结构为一个管道，用于存放每个项目方的需要处理的批量交易
 ```go
       核心管道，存放一批次的交易，map 中的 key 为业务方 id*/
@@ -181,8 +181,8 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 	}, syncer.loopInterval)
 ```
   - 调用封装的方法，通过 chains-union-rpc 接口批量获取区块头，并且判断链上是否出现回滚情况。
-    如果出现某个区块的 parentHash 不等于上一个区块的 hash 则认为出现链回滚（重组的情况），
-    则同步器会空转，无法获取到新的一批区块，直到重组区块被处理完成。（通过 lastTraversalBlockHeader 来进行标记处理）
+    如果出现某个区块的 `parentHash` 不等于上一个区块的 `hash` 则认为出现链回滚（重组的情况），
+    则同步器会空转，无法获取到新的一批区块，直到重组区块被处理完成。（通过 `lastTraversalBlockHeader` 来进行标记处理）
 ```go
   /*headers 只有一个数据的情况（边界情况）：
   元素的 parentHash != lastTraversedHeader 的 Hash
@@ -215,7 +215,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
         /*核心管道，存放一批次的交易，map 中的 key 为业务方 id*/
         businessChannels chan map[string]*BatchTransactions
     ```
-    4. 交易推送完后，还需要对所解析的区块进行存库，存储到 blocks 表中。然后清理上一批次的交易 headers 列表，使同步器能够进行下一次同步区块。
+    4. 交易推送完后，还需要对所解析的区块进行存库，存储到 `blocks` 表中。然后清理上一批次的交易 `headers` 列表，使同步器能够进行下一次同步区块。
     ```go
         /*处理这一批次区块*/
         err := syncer.processBatch(syncer.headers)
