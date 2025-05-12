@@ -115,7 +115,7 @@ make test
 ![img.png](images/synchronizer.png)
 
 
-## 👬🏻 Participations
+## 👬🏻 Partners
 
 - shawn_shaw: cola_ocean@foxmail.com
 - 0xManta: manta_0x@icloud.com
