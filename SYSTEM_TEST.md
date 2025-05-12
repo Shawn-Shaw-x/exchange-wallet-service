@@ -71,10 +71,25 @@
 
   ![img.png](images/success.png)
 
-## 2. 扫链同步器扫块测试
+## 2. 扫链同步器（生产者）扫块测试
 - 启动扫链同步器服务
 
 ![img.png](images/scanBlocksRequest.png)
 ![img_1.png](images/scanBlocksResponse.png)
 
-## 3. 充值业务测试
+## 3. 交易发现器（消费者）、充值业务测试
+1. 启动之前余额
+
+![img.png](images/beforeFinder.png)
+
+2. 转入资金
+
+![img.png](images/transfer2user.png)
+
+3. 运行 ./exchange-wallet-service work
+
+![img.png](images/runWork.png)
+
+4. 启动之后余额（等待确认位之后（10 个块））
+
+![img.png](images/afterFinder.png)

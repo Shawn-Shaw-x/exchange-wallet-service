@@ -110,7 +110,11 @@ func NewCli(GitCommit string, GitData string) *cli.App {
     ```
   	SetTokenAddress(context.Context, *SetTokenAddressRequest) (*SetTokenAddressResponse, error)
   ```
+
 - **联调** `exchange-wallet-service`、`signature-machine`、 `chains-union-rpc` **三个项目**
+
+交易流程图
+![img.png](images/withdrawTx.png)
   1. exchange-wallet-service 业务方注册
   
   ![img.png](images/businessRegistRequest.png)
@@ -155,6 +159,9 @@ func NewCli(GitCommit string, GitData string) *cli.App {
   ![img.png](images/success.png)
 
 ## 6. 扫链同步器搭建
+流程图
+![img.png](images/synchronizer.png)
+
   - `worker` 下，建立 `synchronizer.go` 文件
     核心数据结构为一个管道，用于存放每个项目方的需要处理的批量交易
 ```go
@@ -229,7 +236,65 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 
 ![img.png](images/scanBlocksRequest.png)
 ![img_1.png](images/scanBlocksResponse.png)
-## 7. 充值业务实现
+## 7. 交易发现器、充值业务实现
+流程图
+![img.png](images/finder.png)
+
+  在之前的开发步骤中，我们实现了交易的同步器，负责将区块链上的区块扫描下来，并解析交易筛选出
+  与我们交易所内所有项目方有关的地址，放到一个同步管道中。（属于生成者的角色）
+  在这步的开发中，我们将实现一个消费者角色，也就是交易的发现器。
+  在这个发现器中，我们将实现充值、提现、归集、转冷、转热交易的链上发现处理，
+  并且完成充值确认位的处理，交易流水的入库处理。
+  
+  1. 协程异步启动交易发现器
+  ```go
+	/*协程异步处理任务*/
+	f.tasks.Go(func() error {
+		log.Info("handle deposit task start")
+		for batch := range f.BaseSynchronizer.businessChannels {
+			log.Info("deposit business channel", "batch length", len(batch))
+			log.Error("=================", "batch length", len(batch))
+
+			/* 实现所有交易处理*/
+			if err := f.handleBatch(batch); err != nil {
+				log.Info("failed to handle batch, stopping L2 Synchronizer:", "err", err)
+				return fmt.Errorf("failed to handle batch, stopping L2 Synchronizer: %w", err)
+			}
+		}
+		return nil
+	})
+  ```
+  2. 消费 businessChannel 中的交易
+    businessChannel 中一个map存放的是所有项目方的这批次的交易列表。将其按项目方取出来，
+    然后分别对每一笔交易进行入库处理，需要处理的任务如下：
+
+  ```go
+    /*
+    处理所有推送过来交易（一批次，所有有关项目方的都在这个 map 中）
+    充值：库中原来没有，入库、更新余额。库中的充值更新确认位
+    提现：库中原来有记录（项目方提交的），更新状态为已发现
+    归集：库中原来有记录（项目方提交的），更新状态为已发现
+    热转冷、冷转热：库中原来有记录（项目方提交的），更新状态为已发现
+    交易流水：入库 transaction 表
+    */
+   ```
+
+### 交易发现器测试
+1. 启动之前余额
+
+![img.png](images/beforeFinder.png)
+
+2. 转入资金
+
+![img.png](images/transfer2user.png)
+
+3. 运行 ./exchange-wallet-service work
+
+![img.png](images/runWork.png)
+
+4. 启动之后余额（等待确认位之后（10 个块））
+
+![img.png](images/afterFinder.png)
 
 ## 8. 提现业务实现
 
