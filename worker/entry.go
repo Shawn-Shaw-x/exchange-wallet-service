@@ -12,15 +12,17 @@ import (
 	"sync/atomic"
 )
 
-type WorkerInterance struct {
+type WorkerEntry struct {
 	BaseSynchronizer *BaseSynchronizer
+
+	Finder *Finder
 
 	shutdown context.CancelCauseFunc
 	stopped  atomic.Bool
 }
 
 /*新建所有定时任务*/
-func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.CancelCauseFunc) (*WorkerInterance, error) {
+func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.CancelCauseFunc) (*WorkerEntry, error) {
 	db, err := database.NewDB(ctx, cfg.MasterDB)
 	if err != nil {
 		log.Error("failed to connect to master database", "err", err)
@@ -38,47 +40,60 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		return nil, err
 	}
 
-	/* 0. 处理同步器 worker*/
+	/* 1. 新建处理同步器 worker*/
 	synchronizer, err := NewSynchronizer(cfg, db, rpcClient, shutdown)
 	if err != nil {
 		log.Error("failed to create synchronizer", "err", err)
 		return nil, err
 	}
-	/* todo 1. 充值处理任务*/
-	/* todo 2. 提现处理任务*/
-	/* todo 3. 内部交易处理任务*/
-	/*todo 4. 回滚任务*/
+	/*2. 新建交易发现器*/
+	finder, err := NewFinder(synchronizer, *cfg, shutdown)
+	if err != nil {
+		log.Error("failed to create finder", "err", err)
+		return nil, err
+	}
+	/* todo 3. 提现处理任务*/
+	/* todo 4. 内部交易处理任务*/
+	/*todo 5. 回滚处理任务*/
+	/*todo 6. 通知处理任务*/
 
-	out := &WorkerInterance{
+	out := &WorkerEntry{
 		BaseSynchronizer: synchronizer,
+		Finder:           finder,
 		shutdown:         shutdown,
 	}
 	return out, nil
 }
 
-func (w *WorkerInterance) Start(ctx context.Context) error {
+func (w *WorkerEntry) Start(ctx context.Context) error {
 	/* 1. 启动同步器*/
 	err := w.BaseSynchronizer.Start()
 	if err != nil {
 		log.Error("failed to start base-synchronizer", "err", err)
 		return err
 	}
-	/*todo 2. 启动充值任务*/
-	/*todo 3. 启动提现任务*/
-	/*todo 4. 启动内部交易任务*/
-	/*todo 6. 启动回滚任务*/
-	/*todo 7. 启动通知任务*/
+	/*todo 2. 启动交易发现器*/
+	err = w.Finder.Start()
+	if err != nil {
+		log.Error("failed to start finder", "err", err)
+		return err
+	}
+	/*todo 3. 启动提现处理任务*/
+	/*todo 4. 启动内部交易处理任务*/
+	/*todo 6. 启动回滚处理任务*/
+	/*todo 7. 启动通知处理任务*/
 	return nil
 }
 
-func (w *WorkerInterance) Stop(ctx context.Context) error {
-	/*todo 1. 停止同步器*/
+func (w *WorkerEntry) Stop(ctx context.Context) error {
+	/* 1. 停止同步器*/
 	err := w.BaseSynchronizer.Stop()
 	if err != nil {
 		log.Error("failed to stop base-synchronizer", "err", err)
 		return err
 	}
-	/*todo 2. 停止充值任务*/
+	/*todo 2. 停止交易发现器*/
+
 	/*todo 3. 停止提现任务*/
 	/*todo 4. 停止内部交易任务*/
 	/*todo 6. 停止回滚任务*/
@@ -86,6 +101,6 @@ func (w *WorkerInterance) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (w *WorkerInterance) Stopped() bool {
+func (w *WorkerEntry) Stopped() bool {
 	return w.stopped.Load()
 }

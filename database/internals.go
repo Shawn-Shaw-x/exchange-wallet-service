@@ -3,7 +3,9 @@ package database
 import (
 	"errors"
 	"exchange-wallet-service/database/constant"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"math/big"
@@ -51,6 +53,7 @@ type InternalsDB interface {
 
 	StoreInternal(string, *Internals) error
 	UpdateInternalById(requestId string, id string, signedTx string, status constant.TxStatus) error
+	UpdateInternalStatusByTxHash(requestId string, status constant.TxStatus, internalsList []*Internals) error
 
 	// todo
 }
@@ -66,6 +69,44 @@ func NewInternalsDB(db *gorm.DB) InternalsDB {
 /*存储内部交易*/
 func (db *internalsDB) StoreInternal(requestId string, internals *Internals) error {
 	return db.gorm.Table("internals_" + requestId).Create(internals).Error
+}
+
+/*更新内部交易状态*/
+func (db *internalsDB) UpdateInternalStatusByTxHash(requestId string, status constant.TxStatus, internalsList []*Internals) error {
+	if len(internalsList) == 0 {
+		return nil
+	}
+	tableName := fmt.Sprintf("internals_%s", requestId)
+
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		var txHashList []string
+		for _, internal := range internalsList {
+			txHashList = append(txHashList, internal.TxHash.String())
+		}
+
+		result := tx.Table(tableName).
+			Where("hash IN ?", txHashList).
+			Update("status", status)
+
+		if result.Error != nil {
+			return fmt.Errorf("batch update status failed: %w", result.Error)
+		}
+
+		if result.RowsAffected == 0 {
+			log.Warn("No internals updated",
+				"requestId", requestId,
+				"expectedCount", len(internalsList),
+			)
+		}
+
+		log.Info("Batch update internals status success",
+			"requestId", requestId,
+			"count", result.RowsAffected,
+			"status", status,
+		)
+
+		return nil
+	})
 }
 
 /*查询内部交易*/

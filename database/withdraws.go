@@ -53,6 +53,7 @@ type WithdrawDB interface {
 
 	StoreWithdraw(requestId string, withdraw *Withdraws) error
 	UpdateWithdrawById(requestId string, guid string, signedTx string, status constant.TxStatus) error
+	UpdateWithdrawStatusByTxHash(requestId string, status constant.TxStatus, withdrawsList []*Withdraws) error
 
 	// todo
 }
@@ -114,6 +115,44 @@ func (db *withdrawsDB) UpdateWithdrawById(requestId string, guid string, signedT
 		"updates", updates,
 	)
 	return nil
+}
+
+/*提现状态更新*/
+func (db *withdrawsDB) UpdateWithdrawStatusByTxHash(requestId string, status constant.TxStatus, withdrawsList []*Withdraws) error {
+	if len(withdrawsList) == 0 {
+		return nil
+	}
+	tableName := fmt.Sprintf("withdraws_%s", requestId)
+
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		var txHashList []string
+		for _, withdraw := range withdrawsList {
+			txHashList = append(txHashList, withdraw.TxHash.String())
+		}
+
+		result := tx.Table(tableName).
+			Where("hash IN ?", txHashList).
+			Update("status", status)
+
+		if result.Error != nil {
+			return fmt.Errorf("batch update status failed: %w", result.Error)
+		}
+
+		if result.RowsAffected == 0 {
+			log.Warn("No withdraws updated",
+				"requestId", requestId,
+				"expectedCount", len(withdrawsList),
+			)
+		}
+
+		log.Info("Batch update withdraws status success",
+			"requestId", requestId,
+			"count", result.RowsAffected,
+			"status", status,
+		)
+
+		return nil
+	})
 }
 
 /*检查提现是否存在*/

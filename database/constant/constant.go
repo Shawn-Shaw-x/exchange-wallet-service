@@ -12,9 +12,9 @@ const (
 	TxStatusCreateUnsigned TxStatus = "create_unsign"
 	TxStatusSigned         TxStatus = "signed"
 	TxStatusBroadcasted    TxStatus = "broadcasted"
-	TxStatusWalletDone     TxStatus = "wallet_done"
+	TxStatusWalletDone     TxStatus = "wallet_done" /*交易已完全确认*/
 	TxStatusNotified       TxStatus = "notified"
-	TxStatusSuccess        TxStatus = "success"
+	TxStatusSuccess        TxStatus = "success" /*交易刚成功*/
 	TxStatusFallback       TxStatus = "fallback"
 )
 

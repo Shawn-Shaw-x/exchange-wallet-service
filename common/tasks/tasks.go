@@ -12,6 +12,7 @@ type Group struct {
 	HandleCrit func(err error)
 }
 
+/*启动协程异步处理任务*/
 func (t *Group) Go(fn func() error) {
 	t.errGroup.Go(func() error {
 		defer func() {
