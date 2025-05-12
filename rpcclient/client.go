@@ -89,3 +89,22 @@ func (c *ChainsUnionRpcClient) GetBlockInfo(blockNumber *big.Int) ([]*chainsunio
 	}
 	return blockInfo.Transactions, nil
 }
+
+/*获取单笔交易封装*/
+func (c *ChainsUnionRpcClient) GetTransactionByHash(hash string) (*chainsunion.TxMessage, error) {
+	req := &chainsunion.TxHashRequest{
+		Chain:   c.ChainName,
+		Network: "mainnet",
+		Hash:    hash,
+	}
+	txInfo, err := c.ChainsRpcClient.GetTxByHash(c.Ctx, req)
+	if err != nil {
+		log.Error("get GetTxByHash fail", "err", err)
+		return nil, err
+	}
+	if txInfo.Code == chainsunion.ReturnCode_ERROR {
+		log.Error("get block info fail", "err", err)
+		return nil, err
+	}
+	return txInfo.Tx, nil
+}

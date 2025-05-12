@@ -48,6 +48,7 @@ type DepositsDB interface {
 	StoreDeposits(string, []*Deposits) error
 	QueryDepositsById(requestId string, guid string) (*Deposits, error)
 	UpdateDepositById(requestId string, guid string, signedTx string, status constant.TxStatus) error
+	UpdateDepositsConfirms(requestId string, blockNumber uint64, confirms uint64) error
 
 	// todo
 }
@@ -106,6 +107,37 @@ func (db *depositsDB) UpdateDepositById(requestId string, guid string, signedTx 
 
 		if err := tx.Table("deposits_" + requestId).Save(&deposit).Error; err != nil {
 			return fmt.Errorf("failed to update deposit for GUID: %s, error: %w", guid, err)
+		}
+
+		return nil
+	})
+}
+
+/*更新确认位置*/
+func (db *depositsDB) UpdateDepositsConfirms(requestId string, blockNumber uint64, confirms uint64) error {
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		var unConfirmDeposits []*Deposits
+		/*查出未确认交易*/
+		result := tx.Table("deposits_"+requestId).
+			Where("block_number <= ? AND status = ? AND status != ?", blockNumber, constant.TxStatusBroadcasted, constant.TxStatusFallback).
+			Find(&unConfirmDeposits)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		/*更新未确的交易*/
+		for _, deposit := range unConfirmDeposits {
+			/*当前区块-交易区块 > 确认位则为过了确认位*/
+			chainConfirm := blockNumber - deposit.BlockNumber.Uint64()
+			if chainConfirm >= confirms {
+				deposit.Confirms = uint8(confirms)
+				deposit.Status = constant.TxStatusWalletDone
+			} else {
+				deposit.Confirms = uint8(chainConfirm)
+			}
+			if err := tx.Table("deposits_" + requestId).Save(&deposit).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil

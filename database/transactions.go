@@ -8,6 +8,7 @@ import (
 	"math/big"
 )
 
+/*交易流水表*/
 type Transactions struct {
 	GUID         uuid.UUID                `gorm:"primaryKey" json:"guid"`
 	BlockHash    common.Hash              `gorm:"column:block_hash;serializer:bytes"  db:"block_hash" json:"block_hash"`
@@ -31,6 +32,9 @@ type TransactionsView interface {
 
 type TransactionsDB interface {
 	TransactionsView
+
+	StoreTransactions(string, []*Transactions, uint64) error
+
 	/*todo*/
 }
 
@@ -40,4 +44,10 @@ type transactionsDB struct {
 
 func NewTransactionsDB(db *gorm.DB) TransactionsDB {
 	return &transactionsDB{db}
+}
+
+/*存储交易记录*/
+func (db *transactionsDB) StoreTransactions(requestId string, transactionsList []*Transactions, transactionsLength uint64) error {
+	result := db.gorm.Table("transactions_"+requestId).CreateInBatches(transactionsList, int(transactionsLength))
+	return result.Error
 }
