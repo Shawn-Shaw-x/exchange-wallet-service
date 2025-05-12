@@ -10,6 +10,7 @@ import (
 	"exchange-wallet-service/rpcclient"
 	"exchange-wallet-service/rpcclient/chainsunion"
 	"exchange-wallet-service/services"
+	"exchange-wallet-service/worker"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -49,6 +50,12 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 				Flags:       flags,
 				Description: "Run rpc services",
 				Action:      cliapp.LifecycleCmd(runRpc),
+			},
+			{
+				Name:        "work",
+				Flags:       flags,
+				Description: "Run rpc scanner wallet chain node",
+				Action:      cliapp.LifecycleCmd(runAllWorker),
 			},
 		},
 	}
@@ -113,4 +120,15 @@ func runRpc(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lifecycl
 
 	/*3. grpc 服务启动 */
 	return services.NewWalletBusinessService(grpcServerConfig, db, rpcClient)
+}
+
+/*启动所有定时任务，扫链，处理充值、提现、内部、回滚*/
+func runAllWorker(ctx *cli.Context, shutdown context.CancelCauseFunc) (cliapp.Lifecycle, error) {
+	log.Info("starting synchronizer")
+	cfg, err := config.LoadConfig(ctx)
+	if err != nil {
+		log.Error("failed to load config", "err", err)
+		return nil, err
+	}
+	return worker.NewAllWorker(ctx.Context, &cfg, shutdown)
 }

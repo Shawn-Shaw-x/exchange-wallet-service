@@ -1,10 +1,12 @@
 package database
 
 import (
+	"errors"
 	"exchange-wallet-service/database/constant"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"strings"
 )
 
 type Address struct {
@@ -16,6 +18,8 @@ type Address struct {
 }
 
 type AddressesView interface {
+	AddressExist(requestId string, address *common.Address) (bool, constant.AddressType)
+
 	//	todo
 }
 
@@ -29,6 +33,7 @@ type addressDB struct {
 	gorm *gorm.DB
 }
 
+/*存地址*/
 func (db *addressDB) StoreAddresses(requestId string, addressList []*Address) error {
 	for _, addr := range addressList {
 		addr.Address = common.HexToAddress(addr.Address.Hex())
@@ -36,6 +41,22 @@ func (db *addressDB) StoreAddresses(requestId string, addressList []*Address) er
 
 	return db.gorm.Table("addresses_"+requestId).
 		CreateInBatches(&addressList, len(addressList)).Error
+}
+
+/*是否存在地址*/
+func (db *addressDB) AddressExist(requestId string, address *common.Address) (bool, constant.AddressType) {
+	var addressEntry Address
+	err := db.gorm.Table("addresses_"+requestId).
+		Where("address = ?", strings.ToLower(address.String())).
+		First(&addressEntry).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, constant.AddressTypeUser
+		}
+		return false, constant.AddressTypeUser
+	}
+	return true, addressEntry.AddressType
 }
 
 func NewAddressDB(db *gorm.DB) AddressDB {

@@ -111,8 +111,11 @@ make test
 ### 一笔 withdraw 交易的流程图
 ![img.png](images/withdrawTx.png)
 
+### 扫链同步器流程图
+![img.png](images/synchronizer.png)
 
-## 👬🏻 Participations
+
+## 👬🏻 Partners
 
 - shawn_shaw: cola_ocean@foxmail.com
 - 0xManta: manta_0x@icloud.com
