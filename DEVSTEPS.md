@@ -238,7 +238,12 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 ![img_1.png](images/scanBlocksResponse.png)
 ## 7. 交易发现器、充值业务实现
 流程图
+
 ![img.png](images/finder.png)
+
+充值业务泳道图
+
+![img.png](images/depositBusiness.png)
 
   在之前的开发步骤中，我们实现了交易的同步器，负责将区块链上的区块扫描下来，并解析交易筛选出
   与我们交易所内所有项目方有关的地址，放到一个同步管道中。（属于生成者的角色）

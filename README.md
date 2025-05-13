@@ -116,6 +116,10 @@ make test
 
 ## 交易发现器（消费者）流程图
 ![img.png](images/finder.png)
+
+## 充值业务泳道图
+![img.png](images/depositBusiness.png)
+
 ## 👬🏻 Partners
 
 - shawn_shaw: cola_ocean@foxmail.com
