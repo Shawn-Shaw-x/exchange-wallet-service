@@ -45,6 +45,8 @@ type Withdraws struct {
 
 type WithdrawsView interface {
 	QueryWithdrawsById(requestId string, guid string) (*Withdraws, error)
+	UnSendWithdrawsList(requestId string) ([]*Withdraws, error)
+
 	// todo
 }
 
@@ -54,6 +56,7 @@ type WithdrawDB interface {
 	StoreWithdraw(requestId string, withdraw *Withdraws) error
 	UpdateWithdrawById(requestId string, guid string, signedTx string, status constant.TxStatus) error
 	UpdateWithdrawStatusByTxHash(requestId string, status constant.TxStatus, withdrawsList []*Withdraws) error
+	UpdateWithdrawListById(requestId string, withdrawsList []*Withdraws) error
 
 	// todo
 }
@@ -172,4 +175,56 @@ func (db *withdrawsDB) CheckWithdrawExistsById(tableName string, id string) erro
 	}
 
 	return nil
+}
+
+/*查询所有已签名未发送提现*/
+func (db *withdrawsDB) UnSendWithdrawsList(requestId string) ([]*Withdraws, error) {
+	var withdrawsList []*Withdraws
+	err := db.gorm.Table("withdraws_"+requestId).
+		Where("status = ?", constant.TxStatusSigned).
+		Find(&withdrawsList).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("query unsend withdraws failed: %w", err)
+	}
+
+	return withdrawsList, nil
+}
+
+/*根据 id批量更新提现表状态*/
+func (db *withdrawsDB) UpdateWithdrawListById(requestId string, withdrawsList []*Withdraws) error {
+	if len(withdrawsList) == 0 {
+		return nil
+	}
+
+	tableName := fmt.Sprintf("withdraws_%s", requestId)
+
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		for _, withdraw := range withdrawsList {
+			// Update each record individually based on TxHash
+			result := tx.Table(tableName).
+				Where("guid = ?", withdraw.GUID.String()).
+				Updates(map[string]interface{}{
+					"status": withdraw.Status,
+					"amount": withdraw.Amount,
+					"hash":   withdraw.TxHash.String(),
+					// Add other fields to update as necessary
+				})
+
+			// Check for errors in the update operation
+			if result.Error != nil {
+				return fmt.Errorf("update failed for TxHash %s: %w", withdraw.TxHash.Hex(), result.Error)
+			}
+
+			// Log a warning if no rows were updated
+			if result.RowsAffected == 0 {
+				fmt.Printf("No withdraws updated for TxHash: %s\n", withdraw.TxHash.Hex())
+			} else {
+				// Log success message with the number of rows affected
+				fmt.Printf("Updated withdraw for TxHash: %s, status: %s, amount: %s\n", withdraw.TxHash.Hex(), withdraw.Status, withdraw.Amount.String())
+			}
+		}
+
+		return nil
+	})
 }

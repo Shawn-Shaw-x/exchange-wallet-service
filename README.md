@@ -110,16 +110,27 @@ make test
 
 
 ### 一笔 withdraw 交易的流程图
+
 ![img.png](images/withdrawTx.png)
 
 ### 扫链同步器（生产者）流程图
+
 ![img.png](images/synchronizer.png)
 
 ## 交易发现器（消费者）流程图
+
 ![img.png](images/finder.png)
 
 ## 充值业务泳道图
+
 ![img.png](images/depositBusiness.png)
+
+## 提现业务流程图
+![img.png](images/withdrawStruct.png)
+
+## 提现业务泳道图
+
+![img.png](images/withdrawSwim.png)
 
 ## 👬🏻 Partners
 
