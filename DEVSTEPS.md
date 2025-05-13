@@ -446,9 +446,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
    ![img_10.png](images/afterWithdrawBalance.png)
 
 
-## 9. 归集业务实现
-
-## 10. 热转冷、冷转热业务实现
+## 9. 归集、热转冷、冷转热业务实现
 
 ## 11. 回滚业务实现
 
