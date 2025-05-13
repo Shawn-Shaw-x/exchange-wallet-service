@@ -44,6 +44,7 @@ type BalancesDB interface {
 
 	StoreBalances(string, []*Balances) error
 	UpdateOrCreate(string, []*TokenBalance) error
+	UpdateBalanceListByTwoAddress(string, []*Balances) error
 
 	//todo
 }
@@ -333,6 +334,47 @@ func (db *balancesDB) handleWithdraw(tx *gorm.DB, requestId string, balance *Tok
 
 	hotWallet.Balance = new(big.Int).Sub(hotWallet.Balance, balance.Balance)
 	return db.UpdateAndSaveBalance(tx, requestId, hotWallet)
+}
+
+/*更新已有的地址余额*/
+func (db *balancesDB) UpdateBalanceListByTwoAddress(requestId string, balanceList []*Balances) error {
+	if len(balanceList) == 0 {
+		return nil
+	}
+
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		for _, balance := range balanceList {
+			var currentBalance Balances
+			result := tx.Table("balances_"+requestId).
+				Where("address = ? AND token_address = ?",
+					balance.Address.String(),
+					balance.TokenAddress.String()).
+				Take(&currentBalance)
+
+			if result.Error != nil {
+				if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+					continue
+				}
+				return fmt.Errorf("query balance failed: %w", result.Error)
+			}
+			/*
+				提现：
+				1. 提现 100 eth
+				2. balance = balance - 100； lockBalance = lockBalance + 100；
+				3. 发现器发现提现确认后：balance 不变；lockBalance = lockBalance - 100；
+				其他交易可类比
+			*/
+			currentBalance.Balance = new(big.Int).Sub(currentBalance.Balance, balance.LockBalance)
+			/*todo 此处应加上而不是直接赋值（可能有多笔交易）*/
+			currentBalance.LockBalance = balance.LockBalance
+			currentBalance.Timestamp = uint64(time.Now().Unix())
+
+			if err := tx.Table("balances_" + requestId).Save(&currentBalance).Error; err != nil {
+				return fmt.Errorf("save balance failed: %w", err)
+			}
+		}
+		return nil
+	})
 }
 
 func NewBalancesDB(db *gorm.DB) BalancesDB {

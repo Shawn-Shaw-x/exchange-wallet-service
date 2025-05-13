@@ -93,3 +93,48 @@
 4. 启动之后余额（等待确认位之后（10 个块））
 
 ![img.png](images/afterFinder.png)
+
+## 4. 提现测试
+
+1. 签名机生成秘钥对
+  生成一个热钱包地址去使用
+
+![img.png](images/generateKeyPair.png)
+
+2. 注册进钱包业务
+  将这个热钱包地址注册进交易所业务层中
+
+![img.png](images/registHot.png)
+  
+3. 转钱给热钱包地址
+  先给这个热钱包地址一点资金，作为提现所用
+
+![img.png](images/transfer2Hot.png)
+
+4. 手动修改数据库余额（模拟归集后热钱包有钱）
+  因为不是在交易所钱包业务中归集的，所以需要手动改一下库用于测试
+![img_12.png](images/changeDB.png)
+
+5. 构建一笔未签名交易
+  调用交易所钱包业务的构建未签名交易接口
+![img_2.png](images/buildWithdraw.png)
+![img_3.png](images/buildWithdrawResp.png)
+  
+6. 签名这笔交易
+  将未签名交易的 messageHash 交给签名机离线签名
+![img_4.png](images/signTX.png)
+
+7. 检查余额、提现记录
+  先检查下交易还未发送之前的热钱包余额和提现记录情况，方便后续发出交易后对比
+![img_5.png](images/checkBalance.png)
+![img_11.png](images/checkWithdraw.png)
+
+8. 构建已签名交易，等待发起
+  调用钱包层已经签名交易的接口，钱包层收到后，定时任务会发现这笔交易已签名，调用发送交易发送到区块链
+  网络上（交易状态为已广播）然后交易同步器、发现器发现这笔提现交易后，即修改交易状态为（完成）
+![img_7.png](images/buildWithdrawSign.png)
+
+9. 等待交易发出、扫块发现
+  检查数据库中提现记录，发现提现交易已完成。再检查余额记录，发现 0.02 ETH 已被成功扣除。
+![img_9.png](images/afterWithdraw.png)
+![img_10.png](images/afterWithdrawBalance.png)

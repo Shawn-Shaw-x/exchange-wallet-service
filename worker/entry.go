@@ -17,6 +17,8 @@ type WorkerEntry struct {
 
 	Finder *Finder
 
+	Withdraw *Withdraw
+
 	shutdown context.CancelCauseFunc
 	stopped  atomic.Bool
 }
@@ -52,7 +54,12 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		log.Error("failed to create finder", "err", err)
 		return nil, err
 	}
-	/* todo 3. 提现处理任务*/
+	/*  3. 提现处理任务*/
+	withdraw, err := NewWithdraw(cfg, db, rpcClient, shutdown)
+	if err != nil {
+		log.Error("failed to create new withdraw", "err", err)
+		return nil, err
+	}
 	/* todo 4. 内部交易处理任务*/
 	/*todo 5. 回滚处理任务*/
 	/*todo 6. 通知处理任务*/
@@ -60,11 +67,13 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 	out := &WorkerEntry{
 		BaseSynchronizer: synchronizer,
 		Finder:           finder,
+		Withdraw:         withdraw,
 		shutdown:         shutdown,
 	}
 	return out, nil
 }
 
+/*启动所有任务*/
 func (w *WorkerEntry) Start(ctx context.Context) error {
 	/* 1. 启动同步器*/
 	err := w.BaseSynchronizer.Start()
@@ -72,13 +81,19 @@ func (w *WorkerEntry) Start(ctx context.Context) error {
 		log.Error("failed to start base-synchronizer", "err", err)
 		return err
 	}
-	/*todo 2. 启动交易发现器*/
+	/* 2. 启动交易发现器*/
 	err = w.Finder.Start()
 	if err != nil {
 		log.Error("failed to start finder", "err", err)
 		return err
 	}
-	/*todo 3. 启动提现处理任务*/
+	/* 3. 启动提现处理任务*/
+	err = w.Withdraw.Start()
+	if err != nil {
+		log.Error("failed to start withdraw", "err", err)
+		return err
+	}
+
 	/*todo 4. 启动内部交易处理任务*/
 	/*todo 6. 启动回滚处理任务*/
 	/*todo 7. 启动通知处理任务*/

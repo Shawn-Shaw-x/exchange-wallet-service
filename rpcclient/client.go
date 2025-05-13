@@ -108,3 +108,23 @@ func (c *ChainsUnionRpcClient) GetTransactionByHash(hash string) (*chainsunion.T
 	}
 	return txInfo.Tx, nil
 }
+
+/*发送交易接口封装*/
+func (c *ChainsUnionRpcClient) SendTx(rawTx string) (string, error) {
+	log.Info("Send transaction", "rawTx", rawTx, "ChainName", c.ChainName)
+	req := &chainsunion.SendTxRequest{
+		Chain:   c.ChainName,
+		Network: "mainnet",
+		RawTx:   rawTx,
+	}
+	txInfo, err := c.ChainsRpcClient.SendTx(c.Ctx, req)
+	if txInfo == nil {
+		log.Error("send tx info fail, txInfo is null")
+		return "", err
+	}
+	if txInfo.Code == chainsunion.ReturnCode_ERROR {
+		log.Error("send tx info fail", "err", err)
+		return "", err
+	}
+	return txInfo.TxHash, nil
+}
