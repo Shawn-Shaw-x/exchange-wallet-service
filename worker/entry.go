@@ -107,9 +107,18 @@ func (w *WorkerEntry) Stop(ctx context.Context) error {
 		log.Error("failed to stop base-synchronizer", "err", err)
 		return err
 	}
-	/*todo 2. 停止交易发现器*/
-
-	/*todo 3. 停止提现任务*/
+	/* 2. 停止交易发现器*/
+	err = w.Finder.Stop()
+	if err != nil {
+		log.Error("failed to stop finder", "err", err)
+		return err
+	}
+	/* 3. 停止提现任务*/
+	err = w.Withdraw.Stop()
+	if err != nil {
+		log.Error("failed to stop withdraw", "err", err)
+		return err
+	}
 	/*todo 4. 停止内部交易任务*/
 	/*todo 6. 停止回滚任务*/
 	/*todo 7. 停止通知任务*/
