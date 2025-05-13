@@ -20,10 +20,11 @@ type Balances struct {
 	AddressType  constant.AddressType `gorm:"type:varchar(10);not null;default:'eoa'" json:"address_type"`
 	Balance      *big.Int             `gorm:"type:numeric;not null;default:0;check:balance >= 0;serializer:u256" json:"balance"`
 	/*
-		锁定余额。
-		例如充值 100 未达确认位时候，
-		balance 和lockBalance 同时加 100
-		到达确认位则 lockBalance 减去 100
+		锁定余额。例如：
+		1. 充值 100 ETH
+		2. balance不变，lockBalance = lockBalance + 100；
+		3. 确认位到了后，balance = balance + 100；lockBalance = lockBalance - 100；
+		4. 对于可用余额：直接就是 balance。对于总余额：balance + lockBalance；
 	*/
 	LockBalance *big.Int `gorm:"type:numeric;not null;default:0;serializer:u256" json:"lock_balance"`
 	Timestamp   uint64   `gorm:"type:bigint;not null;check:timestamp > 0" json:"timestamp"`
@@ -293,7 +294,13 @@ func (db *balancesDB) UpdateAndSaveBalance(tx *gorm.DB, requestId string, balanc
 	}
 
 	currentBalance.Balance = balance.Balance //上游修改这里不做重复计算
-	/*balance 加，lockBalance 也加。 等确认后，lockBalance 减去对应充值交易的金额*/
+	/*
+		锁定余额。例如：
+		1. 充值 100 ETH
+		2. balance不变，lockBalance = lockBalance + 100；
+		3. 确认位到了后，balance = balance + 100；lockBalance = lockBalance - 100；
+		4. 对于可用余额：直接就是 balance。对于总余额：balance + lockBalance；
+	*/
 	currentBalance.LockBalance = new(big.Int).Add(currentBalance.LockBalance, balance.LockBalance)
 	currentBalance.Timestamp = uint64(time.Now().Unix())
 
