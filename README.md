@@ -1,5 +1,5 @@
 # exchange-wallet-service
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Shawn-Shaw-x/exchange-wallet-service)
 ![Go Version](https://img.shields.io/badge/Go-1.20%2B-blue?logo=go)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen?logo=github-actions)
 ![License](https://img.shields.io/github/license/Shawn-Shaw-x/exchange-wallet-service)
