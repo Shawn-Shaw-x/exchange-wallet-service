@@ -418,31 +418,40 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 
 4. 手动修改数据库余额（模拟归集后热钱包有钱）
    因为不是在交易所钱包业务中归集的，所以需要手动改一下库用于测试
+
    ![img_12.png](images/changeDB.png)
 
 5. 构建一笔未签名交易
    调用交易所钱包业务的构建未签名交易接口
+
    ![img_2.png](images/buildWithdraw.png)
+
    ![img_3.png](images/buildWithdrawResp.png)
 
 6. 签名这笔交易
    将未签名交易的 messageHash 交给签名机离线签名
+
    ![img_4.png](images/signTX.png)
 
 7. 检查余额、提现记录
    先检查下交易还未发送之前的热钱包余额和提现记录情况，方便后续发出交易后对比
+
    ![img_5.png](images/checkBalance.png)
     （此处图片有笔误，应该是 0.1 ETH）
+
    ![img_11.png](images/checkWithdraw.png)
 
 8. 构建已签名交易，等待发起
    调用钱包层已经签名交易的接口，钱包层收到后，定时任务会发现这笔交易已签名，调用发送交易发送到区块链
    网络上（交易状态为已广播）然后交易同步器、发现器发现这笔提现交易后，即修改交易状态为（完成）
+
    ![img_7.png](images/buildWithdrawSign.png)
 
 9. 等待交易发出、扫块发现
    检查数据库中提现记录，发现提现交易已完成。再检查余额记录，发现 0.02 ETH 已被成功扣除。
+
    ![img_9.png](images/afterWithdraw.png)
+
    ![img_10.png](images/afterWithdrawBalance.png)
 
 
@@ -454,7 +463,9 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 下面是这三种交易的区别：
 
 归集：from 地址为用户地址，to 地址为热钱包地址（归集地址）
+
 热转冷： from 地址为热钱包地址，to 地址为冷钱包地址
+
 冷转热：from 地址为冷钱包地址，to 地址为热钱包地址
 
 
@@ -571,36 +582,51 @@ func (in *Internal) Start() error {
 
 ### 归集测试
 
-构建未签名交易
-![img_2.png](img_2.png)
-![img_1.png](img_1.png)
-签名机签名
-![img_3.png](img_3.png)
-构建已签名交易
-![img_4.png](img_4.png)
-![img_5.png](img_5.png)
-归集前余额
-![img.png](img.png)
-启动同步器、发现器、内部交易定时任务后查看余额变化
-![img_6.png](img_6.png)
+1. 构建未签名交易
+
+![img_2.png](images/collectUnSignTxReq.png)
+
+![img_1.png](images/collectUnsignTxResp.png)
+
+2. 签名机签名
+
+![img_3.png](images/collectSignature.png)
+
+3. 构建已签名交易
+
+![img_4.png](images/collectSignTxReq.png)
+
+![img_5.png](images/collectSignTxResp.png)
+
+4. 归集前余额
+
+![img.png](images/beforeCollect.png)
+
+5. 启动同步器、发现器、内部交易定时任务后查看余额变化
+
+![img_6.png](images/afterCollect.png)
 
 ### 热转冷测试
-交易构建和签名过程和之前的测试一样，这里省略...
+1. 交易构建和签名过程和之前的测试一样，这里省略...
 
-热转冷前的余额
-![img_7.png](img_7.png)
+2. 热转冷前的余额
 
-热转冷后的余额
-![img_8.png](img_8.png)
+![img_7.png](images/beforeHost2Cold.png)
+
+3. 热转冷后的余额
+
+![img_8.png](images/afterHot2Cold.png)
 
 ### 冷转热测试
-交易构建和签名过程和之前的测试一样，这里省略...
+1. 交易构建和签名过程和之前的测试一样，这里省略...
 
-冷转热之前的余额
-![img_9.png](img_9.png)
+2. 冷转热之前的余额
 
-冷转热之后的余额
-![img_10.png](img_10.png)
+![img_9.png](images/beforeCold2Hot.png)
+
+3. 冷转热之后的余额
+
+![img_10.png](images/afterCold2Hot.png)
 
 ## 11. 回滚业务实现
 
