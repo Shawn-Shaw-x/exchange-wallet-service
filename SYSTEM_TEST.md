@@ -138,3 +138,52 @@
   检查数据库中提现记录，发现提现交易已完成。再检查余额记录，发现 0.02 ETH 已被成功扣除。
 ![img_9.png](images/afterWithdraw.png)
 ![img_10.png](images/afterWithdrawBalance.png)
+
+### 5. 归集测试
+
+1. 构建未签名交易
+
+![img_2.png](images/collectUnSignTxReq.png)
+
+![img_1.png](images/collectUnsignTxResp.png)
+
+2. 签名机签名
+
+![img_3.png](images/collectSignature.png)
+
+3. 构建已签名交易
+
+![img_4.png](images/collectSignTxReq.png)
+
+![img_5.png](images/collectSignTxResp.png)
+
+4. 归集前余额
+
+![img.png](images/beforeCollect.png)
+
+5. 启动同步器、发现器、内部交易定时任务后查看余额变化
+
+![img_6.png](images/afterCollect.png)
+
+### 6. 热转冷测试
+1. 交易构建和签名过程和之前的测试一样，这里省略...
+
+2. 热转冷前的余额
+
+![img_7.png](images/beforeHost2Cold.png)
+
+3. 热转冷后的余额
+
+![img_8.png](images/afterHot2Cold.png)
+
+### 7. 冷转热测试
+1. 交易构建和签名过程和之前的测试一样，这里省略...
+
+2. 冷转热之前的余额
+
+![img_9.png](images/beforeCold2Hot.png)
+
+3. 冷转热之后的余额
+
+![img_10.png](images/afterCold2Hot.png)
+

@@ -132,6 +132,15 @@ make test
 
 ![img.png](images/withdrawSwim.png)
 
+## 归集业务流程图
+
+![img.png](images/collectStruct.png)
+
+## 内部交易流程图
+
+![img.png](images/internalStruct.png)
+
+
 ## 👬🏻 Partners
 
 - shawn_shaw: cola_ocean@foxmail.com
