@@ -144,6 +144,31 @@ func (db *balancesDB) queryBalance(
 	return &balance, nil
 }
 
+/*查询余额*/
+func (db *balancesDB) queryBalanceByType(
+	requestId string,
+	addressType constant.AddressType,
+	address,
+	tokenAddress common.Address,
+) (*Balances, error) {
+	var balance Balances
+
+	err := db.gorm.Table("balances_"+requestId).
+		Where("address = ? AND token_address = ? AND address_type = ?",
+			strings.ToLower(address.String()),
+			strings.ToLower(tokenAddress.String()),
+			strings.ToLower(addressType.String()),
+		).
+		Take(&balance).
+		Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &balance, nil
+}
+
 /*有则更新，无则创建*/
 func (db *balancesDB) UpdateOrCreate(requestId string, balanceList []*TokenBalance) error {
 	if len(balanceList) == 0 {
@@ -207,7 +232,7 @@ func (db *balancesDB) handleDeposit(tx *gorm.DB, requestId string, balance *Toke
 
 /*冷转热余额更新*/
 func (db *balancesDB) handleColdToHot(tx *gorm.DB, requestId string, balance *TokenBalance) error {
-	coldWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeCold, balance.ToAddress, balance.TokenAddress)
+	coldWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeCold, balance.FromAddress, balance.TokenAddress)
 	if err != nil {
 		log.Error("Query cold wallet failed", "err", err)
 		return err
@@ -217,7 +242,7 @@ func (db *balancesDB) handleColdToHot(tx *gorm.DB, requestId string, balance *To
 		return err
 	}
 
-	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.FromAddress, balance.TokenAddress)
+	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.ToAddress, balance.TokenAddress)
 	if err != nil {
 		log.Error("Query hot wallet failed", "err", err)
 		return err
@@ -345,11 +370,19 @@ func (db *balancesDB) UpdateBalanceListByTwoAddress(requestId string, balanceLis
 	return db.gorm.Transaction(func(tx *gorm.DB) error {
 		for _, balance := range balanceList {
 			var currentBalance Balances
+			/*todo bug！！！take 地址是大写的，查不出来，无法插入库*/
 			result := tx.Table("balances_"+requestId).
 				Where("address = ? AND token_address = ?",
 					balance.Address.String(),
 					balance.TokenAddress.String()).
 				Take(&currentBalance)
+
+			/*todo 这里才是正确的*/
+			//result := tx.Table("balances_"+requestId).
+			//	Where("address = ? AND token_address = ?",
+			//		strings.ToLower(balance.Address.String()),
+			//		strings.ToLower(balance.TokenAddress.String())).
+			//	Take(&currentBalance)
 
 			if result.Error != nil {
 				if errors.Is(result.Error, gorm.ErrRecordNotFound) {

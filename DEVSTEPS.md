@@ -258,7 +258,6 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 		log.Info("handle deposit task start")
 		for batch := range f.BaseSynchronizer.businessChannels {
 			log.Info("deposit business channel", "batch length", len(batch))
-			log.Error("=================", "batch length", len(batch))
 
 			/* 实现所有交易处理*/
 			if err := f.handleBatch(batch); err != nil {
@@ -433,6 +432,7 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 7. 检查余额、提现记录
    先检查下交易还未发送之前的热钱包余额和提现记录情况，方便后续发出交易后对比
    ![img_5.png](images/checkBalance.png)
+    （此处图片有笔误，应该是 0.1 ETH）
    ![img_11.png](images/checkWithdraw.png)
 
 8. 构建已签名交易，等待发起
@@ -447,6 +447,160 @@ func NewCli(GitCommit string, GitData string) *cli.App {
 
 
 ## 9. 归集、热转冷、冷转热业务实现
+
+归集业务、热转冷业务、冷转热业务在我们交易所中，可以将其归为一大类。因为这类的交易，
+只需要交易所掌控的地址之间进行交互集合，无须与外部地址进行交易（充值、提现需要和外部地址进行交互）
+所以，我们称这类业务为 Internal 内部交易。
+下面是这三种交易的区别：
+
+归集：from 地址为用户地址，to 地址为热钱包地址（归集地址）
+热转冷： from 地址为热钱包地址，to 地址为冷钱包地址
+冷转热：from 地址为冷钱包地址，to 地址为热钱包地址
+
+
+### 内部交易的整体流程图
+
+### 内部交易的实现
+内部交易的实现实际上和我们的提现业务非常类似，都是由项目方发起，
+且都是需要启动定时任务去扫描数据库中的已签名交易，发送到区块链网络中。
+下面我来介绍下详细的步骤：
+
+1. 项目方调用钱包业务层，生成未签名交易，获得 transactionId 和 32 字节的 messageHash
+
+2. 项目方使用 messageHash 调用自己部署的签名机，签名这笔交易。
+
+3. 项目方使用 transactionId 和 signature 去钱包层构建已签名交易。（钱包层会保存到数据库中）
+
+4. 钱包层启动定时任务，扫描数据库中的内部交易（归集、转冷、转热），发送到区块链网络中，交易状态为已广播。
+
+5. 钱包层的扫链同步器、交易发现器发现这笔内部交易，更新交易的状态为完成。
+
+```go
+/*
+启动内部交易处理任务
+处理归集、热转冷、冷转热
+交易的发送到链上，更新库、余额
+*/
+func (in *Internal) Start() error {
+	log.Info("starting internal worker.......")
+	in.tasks.Go(func() error {
+		for {
+			select {
+			case <-in.ticker.C:
+				log.Info("starting internal worker...")
+				businessList, err := in.db.Business.QueryBusinessList()
+				if err != nil {
+					log.Error("failed to query business list", "err", err)
+					continue
+				}
+				for _, business := range businessList {
+					/*分项目方处理*/
+					unSendTransactionList, err := in.db.Internals.UnSendInternalsList(business.BusinessUid)
+					if err != nil {
+						log.Error("failed to query unsend internals list", "err", err)
+						continue
+					}
+					if unSendTransactionList == nil || len(unSendTransactionList) <= 0 {
+						log.Error("failed to query unsend internals list", "err", err)
+						continue
+					}
+
+					var balanceList []*database.Balances
+
+					for _, unSendTransaction := range unSendTransactionList {
+						/*分单笔交易发送*/
+						txHash, err := in.rpcClient.SendTx(unSendTransaction.TxSignHex)
+						if err != nil {
+							log.Error("failed to send internal transaction", "err", err)
+							continue
+						} else {
+							/*发送成功, 处理from 地址余额*/
+							balanceItem := &database.Balances{
+								TokenAddress: unSendTransaction.TokenAddress,
+								Address:      unSendTransaction.FromAddress,
+								LockBalance:  unSendTransaction.Amount,
+							}
+							/*todo 缺少 to 地址的余额处理？*/
+
+							balanceList = append(balanceList, balanceItem)
+
+							unSendTransaction.TxHash = common.HexToHash(txHash)
+							unSendTransaction.Status = constant.TxStatusBroadcasted
+						}
+					}
+					retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+					if _, err := retry.Do[interface{}](in.resourceCtx, 10, retryStrategy, func() (interface{}, error) {
+						if err := in.db.Gorm.Transaction(func(tx *gorm.DB) error {
+							/*处理内部交易余额*/
+							if len(balanceList) > 0 {
+								log.Info("Update address balance", "totalTx", len(balanceList))
+								if err := in.db.Balances.UpdateBalanceListByTwoAddress(business.BusinessUid, balanceList); err != nil {
+									log.Error("Update address balance fail", "err", err)
+									return err
+								}
+
+							}
+							/*保存内部交易状态*/
+							if len(unSendTransactionList) > 0 {
+								err = in.db.Internals.UpdateInternalListById(business.BusinessUid, unSendTransactionList)
+								if err != nil {
+									log.Error("update internals status fail", "err", err)
+									return err
+								}
+							}
+							return nil
+						}); err != nil {
+							log.Error("unable to persist batch", "err", err)
+							return nil, err
+						}
+						return nil, nil
+					}); err != nil {
+						return err
+					}
+				}
+
+			case <-in.resourceCtx.Done():
+				log.Info("worker is shutting down")
+				return nil
+			}
+		}
+	})
+	return nil
+}
+```
+
+### 归集测试
+
+构建未签名交易
+![img_2.png](img_2.png)
+![img_1.png](img_1.png)
+签名机签名
+![img_3.png](img_3.png)
+构建已签名交易
+![img_4.png](img_4.png)
+![img_5.png](img_5.png)
+归集前余额
+![img.png](img.png)
+启动同步器、发现器、内部交易定时任务后查看余额变化
+![img_6.png](img_6.png)
+
+### 热转冷测试
+交易构建和签名过程和之前的测试一样，这里省略...
+
+热转冷前的余额
+![img_7.png](img_7.png)
+
+热转冷后的余额
+![img_8.png](img_8.png)
+
+### 冷转热测试
+交易构建和签名过程和之前的测试一样，这里省略...
+
+冷转热之前的余额
+![img_9.png](img_9.png)
+
+冷转热之后的余额
+![img_10.png](img_10.png)
 
 ## 11. 回滚业务实现
 

@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"exchange-wallet-service/common/retry"
 	"exchange-wallet-service/common/tasks"
 	"exchange-wallet-service/config"
@@ -56,16 +57,23 @@ func (f *Finder) Start() error {
 	/*协程异步处理任务*/
 	f.tasks.Go(func() error {
 		log.Info("handle deposit task start")
-		for batch := range f.BaseSynchronizer.businessChannels {
-			log.Info("deposit business channel", "batch length", len(batch))
-			log.Error("=================", "batch length", len(batch))
 
-			/* 实现所有交易处理*/
-			if err := f.handleBatch(batch); err != nil {
-				log.Info("failed to handle batch, stopping L2 Synchronizer:", "err", err)
-				return fmt.Errorf("failed to handle batch, stopping L2 Synchronizer: %w", err)
+		for {
+			select {
+			case <-f.resourceCtx.Done():
+				log.Info("handle deposit task done")
+				return nil
+			case batch := <-f.BaseSynchronizer.businessChannels:
+				log.Info("deposit business channel", "batch length", len(batch))
+
+				/* 实现所有交易处理*/
+				if err := f.handleBatch(batch); err != nil {
+					log.Info("failed to handle batch, stopping L2 Synchronizer:", "err", err)
+					return fmt.Errorf("failed to handle batch, stopping L2 Synchronizer: %w", err)
+				}
 			}
 		}
+
 		return nil
 	})
 	return nil
@@ -73,9 +81,15 @@ func (f *Finder) Start() error {
 
 /*停止发现器*/
 func (f *Finder) Stop() error {
+	var result error
 	f.resourceCancel()
-	err := f.tasks.Wait()
-	return err
+	log.Info("stop finder......")
+	if err := f.tasks.Wait(); err != nil {
+		result = errors.Join(result, fmt.Errorf("failed to await finder %w", err))
+		return result
+	}
+	log.Info("stop finder success")
+	return nil
 }
 
 /*
@@ -132,15 +146,15 @@ func (f *Finder) handleBatch(batch map[string]*BatchTransactions) error {
 				return err
 			}
 			amountBigInt, _ := new(big.Int).SetString(txItem.Value, 10)
-			log.Info("transaction amount", "amountBigInt", amountBigInt, "FromAddress", tx.FromAddress, "TokenAddress", tx.TokenAddress, "TokenAddress", tx.ToAddress)
+			log.Info("transaction amount", "amountBigInt", amountBigInt, "FromAddress", tx.FromAddress, "toAddress", tx.ToAddress, "TokenAddress", tx.TokenAddress, "txType", tx.TxType)
 
 			/*代币余额，ETH 主币余额*/
 			balances = append(
 				balances,
 				&database.TokenBalance{
 					FromAddress:  common.HexToAddress(tx.FromAddress),
-					ToAddress:    common.HexToAddress(txItem.To),
-					TokenAddress: common.HexToAddress(txItem.ContractAddress),
+					ToAddress:    common.HexToAddress(tx.ToAddress),
+					TokenAddress: common.HexToAddress(tx.TokenAddress),
 					Balance:      amountBigInt,
 					TxType:       tx.TxType,
 				},

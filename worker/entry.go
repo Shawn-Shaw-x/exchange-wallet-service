@@ -19,6 +19,8 @@ type WorkerEntry struct {
 
 	Withdraw *Withdraw
 
+	Internal *Internal
+
 	shutdown context.CancelCauseFunc
 	stopped  atomic.Bool
 }
@@ -60,7 +62,12 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		log.Error("failed to create new withdraw", "err", err)
 		return nil, err
 	}
-	/* todo 4. 内部交易处理任务*/
+	/*  4. 内部交易处理任务*/
+	internal, err := NewInternal(cfg, db, rpcClient, shutdown)
+	if err != nil {
+		log.Error("failed to create internal", "err", err)
+		return nil, err
+	}
 	/*todo 5. 回滚处理任务*/
 	/*todo 6. 通知处理任务*/
 
@@ -68,6 +75,7 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		BaseSynchronizer: synchronizer,
 		Finder:           finder,
 		Withdraw:         withdraw,
+		Internal:         internal,
 		shutdown:         shutdown,
 	}
 	return out, nil
@@ -94,7 +102,12 @@ func (w *WorkerEntry) Start(ctx context.Context) error {
 		return err
 	}
 
-	/*todo 4. 启动内部交易处理任务*/
+	/* 4. 启动内部交易处理任务*/
+	err = w.Internal.Start()
+	if err != nil {
+		log.Error("failed to start internal", "err", err)
+		return err
+	}
 	/*todo 6. 启动回滚处理任务*/
 	/*todo 7. 启动通知处理任务*/
 	return nil
@@ -119,7 +132,12 @@ func (w *WorkerEntry) Stop(ctx context.Context) error {
 		log.Error("failed to stop withdraw", "err", err)
 		return err
 	}
-	/*todo 4. 停止内部交易任务*/
+	/* 4. 停止内部交易任务*/
+	err = w.Internal.Stop()
+	if err != nil {
+		log.Error("failed to stop internal", "err", err)
+		return err
+	}
 	/*todo 6. 停止回滚任务*/
 	/*todo 7. 停止通知任务*/
 	return nil

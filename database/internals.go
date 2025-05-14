@@ -45,6 +45,7 @@ type Internals struct {
 
 type InternalsView interface {
 	QueryInternalsById(requestId string, guid string) (*Internals, error)
+	UnSendInternalsList(requestId string) ([]*Internals, error)
 	// todo
 }
 
@@ -54,6 +55,7 @@ type InternalsDB interface {
 	StoreInternal(string, *Internals) error
 	UpdateInternalById(requestId string, id string, signedTx string, status constant.TxStatus) error
 	UpdateInternalStatusByTxHash(requestId string, status constant.TxStatus, internalsList []*Internals) error
+	UpdateInternalListById(requestId string, internalsList []*Internals) error
 
 	// todo
 }
@@ -147,4 +149,52 @@ func (db *internalsDB) UpdateInternalById(requestId string, id string, signedTx 
 	}
 
 	return nil
+}
+
+/*查询未发送的内部交易*/
+func (db *internalsDB) UnSendInternalsList(requestId string) ([]*Internals, error) {
+	var internalsList []*Internals
+	err := db.gorm.Table("internals_"+requestId).
+		Where("status = ?", constant.TxStatusSigned).
+		Find(&internalsList).Error
+	if err != nil {
+		return nil, err
+	}
+	return internalsList, nil
+}
+
+/*更新内部交易*/
+func (db *internalsDB) UpdateInternalListById(requestId string, internalsList []*Internals) error {
+	if len(internalsList) == 0 {
+		return nil
+	}
+	tableName := fmt.Sprintf("internals_%s", requestId)
+
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		for _, internal := range internalsList {
+			// Update each record individually based on TxHash
+			result := tx.Table(tableName).
+				Where("guid = ?", internal.GUID.String()).
+				Updates(map[string]interface{}{
+					"status": internal.Status,
+					"amount": internal.Amount,
+					"hash":   internal.TxHash.String(),
+				})
+
+			// Check for errors in the update operation
+			if result.Error != nil {
+				return fmt.Errorf("update failed for TxHash %s: %w", internal.TxHash, result.Error)
+			}
+
+			// Log a warning if no rows were updated
+			if result.RowsAffected == 0 {
+				log.Info("No internals updated for TxHash:", "txHash", internal.TxHash)
+			} else {
+				// Log success message with the number of rows affected
+				log.Info("Updated internals for ", "TxHash", internal.TxHash, "status", internal.Status, "amount", internal.Amount)
+			}
+		}
+
+		return nil
+	})
 }

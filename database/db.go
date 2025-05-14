@@ -80,10 +80,10 @@ func NewDB(ctx context.Context, dbConfig config.DBConfig) (*DB, error) {
 	newLogger := logger.New(
 		log.New(log.Writer(), "\r\n", log.LstdFlags), // io writer
 		logger.Config{
-			SlowThreshold:             time.Second, // Slow SQL threshold
-			LogLevel:                  logger.Info, // Log level
-			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
-			Colorful:                  true,        // Disable color
+			SlowThreshold:             time.Second,  // Slow SQL threshold
+			LogLevel:                  logger.Error, // Log level
+			IgnoreRecordNotFoundError: true,         // Ignore ErrRecordNotFound error for logger
+			Colorful:                  true,         // Disable color
 		},
 	)
 	gormConfig := gorm.Config{

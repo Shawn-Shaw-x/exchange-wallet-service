@@ -215,7 +215,7 @@ func (syncer *BaseSynchronizer) processBatch(headers []rpcclient.BlockHeader) er
 				if !existToAddress && !existFromAddress {
 					continue
 				}
-				log.Info("found transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress, "fromAddressType", FromAddressType, "toAddressType", toAddressType)
+				log.Info("================ found transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress, "fromAddressType", FromAddressType, "toAddressType", toAddressType)
 
 				/*组装交易*/
 				txItem := &Transaction{
@@ -261,7 +261,11 @@ func (syncer *BaseSynchronizer) processBatch(headers []rpcclient.BlockHeader) er
 				if (existFromAddress && FromAddressType == constant.AddressTypeCold) && (existToAddress && toAddressType == constant.AddressTypeHot) {
 					log.Info("Found cold2hot transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress)
 					txItem.TxType = constant.TxTypeCold2Hot
+				} else {
+					/*都不命中不处理*/
+					continue
 				}
+
 				/*项目方的交易列表*/
 				businessTransactions = append(businessTransactions, txItem)
 			}
