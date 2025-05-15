@@ -57,6 +57,7 @@ type WithdrawDB interface {
 	UpdateWithdrawById(requestId string, guid string, signedTx string, status constant.TxStatus) error
 	UpdateWithdrawStatusByTxHash(requestId string, status constant.TxStatus, withdrawsList []*Withdraws) error
 	UpdateWithdrawListById(requestId string, withdrawsList []*Withdraws) error
+	HandleFallBackWithdraw(requestId string, startBlock, EndBlock *big.Int) error
 
 	// todo
 }
@@ -189,6 +190,26 @@ func (db *withdrawsDB) UnSendWithdrawsList(requestId string) ([]*Withdraws, erro
 	}
 
 	return withdrawsList, nil
+}
+
+/*提现回滚实现*/
+func (db *withdrawsDB) HandleFallBackWithdraw(requestId string, startBlock, EndBlock *big.Int) error {
+	for indexBlock := startBlock.Uint64(); indexBlock <= EndBlock.Uint64(); indexBlock++ {
+		var withdrawsSingle = Withdraws{}
+		result := db.gorm.Table("withdraws_"+requestId).Where("block_number=?", indexBlock).Take(&withdrawsSingle)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return result.Error
+		}
+		withdrawsSingle.Status = constant.TxStatusFallback
+		err := db.gorm.Table("withdraws_" + requestId).Save(&withdrawsSingle).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /*根据 id批量更新提现表状态*/

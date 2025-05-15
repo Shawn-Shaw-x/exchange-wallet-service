@@ -50,6 +50,7 @@ type DepositsDB interface {
 	UpdateDepositById(requestId string, guid string, signedTx string, status constant.TxStatus) error
 	UpdateDepositsConfirms(requestId string, blockNumber uint64, confirms uint64) error
 
+	HandleFallBackDeposits(requestId string, startBlock, EndBlock *big.Int) error
 	// todo
 }
 
@@ -142,6 +143,28 @@ func (db *depositsDB) UpdateDepositsConfirms(requestId string, blockNumber uint6
 
 		return nil
 	})
+}
+
+/*回滚处理*/
+func (db *depositsDB) HandleFallBackDeposits(requestId string, startBlock, EndBlock *big.Int) error {
+	log.Info("Handle fallBack deposit transactions", "startBlock", startBlock.String(), "EndBlock", EndBlock.String())
+	for indexBlock := startBlock.Uint64(); indexBlock <= EndBlock.Uint64(); indexBlock++ {
+		var depositsSingle = Deposits{}
+		result := db.gorm.Table("deposits_"+requestId).Where("block_number=?", indexBlock).Take(&depositsSingle)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return result.Error
+		}
+		log.Info("Handle fallBack deposit transactions", "txStatusFallBack", constant.TxStatusFallback, "startBlock", startBlock.String(), "EndBlock", EndBlock.String())
+		depositsSingle.Status = constant.TxStatusFallback
+		err := db.gorm.Table("deposits_" + requestId).Save(&depositsSingle).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func NewDepositsDB(db *gorm.DB) DepositsDB {

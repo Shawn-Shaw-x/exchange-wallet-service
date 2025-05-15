@@ -56,6 +56,7 @@ type InternalsDB interface {
 	UpdateInternalById(requestId string, id string, signedTx string, status constant.TxStatus) error
 	UpdateInternalStatusByTxHash(requestId string, status constant.TxStatus, internalsList []*Internals) error
 	UpdateInternalListById(requestId string, internalsList []*Internals) error
+	HandleFallBackInternals(requestId string, startBlock, EndBlock *big.Int) error
 
 	// todo
 }
@@ -197,4 +198,25 @@ func (db *internalsDB) UpdateInternalListById(requestId string, internalsList []
 
 		return nil
 	})
+}
+
+/*内部交易回滚*/
+func (db *internalsDB) HandleFallBackInternals(requestId string, startBlock, EndBlock *big.Int) error {
+	for indexBlock := startBlock.Uint64(); indexBlock < EndBlock.Uint64(); indexBlock++ {
+		var internalsSingle = Internals{}
+		result := db.gorm.Table("internals_"+requestId).Where("block_number=?", indexBlock).Take(&internalsSingle)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return result.Error
+		}
+		log.Info("Handle fallBack internal transactions", "txStatusFallBack", constant.TxStatusFallback)
+		internalsSingle.Status = constant.TxStatusFallback
+		err := db.gorm.Table("internals_" + requestId).Save(&internalsSingle).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

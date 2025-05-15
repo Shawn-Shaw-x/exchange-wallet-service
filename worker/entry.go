@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 )
 
+/*所有定时任务入口*/
 type WorkerEntry struct {
 	BaseSynchronizer *BaseSynchronizer
 
@@ -20,6 +21,8 @@ type WorkerEntry struct {
 	Withdraw *Withdraw
 
 	Internal *Internal
+
+	Fallback *Fallback
 
 	shutdown context.CancelCauseFunc
 	stopped  atomic.Bool
@@ -68,7 +71,12 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		log.Error("failed to create internal", "err", err)
 		return nil, err
 	}
-	/*todo 5. 回滚处理任务*/
+	/* 5. 回滚处理任务*/
+	fallback, err := NewFallback(cfg, db, rpcClient, synchronizer, shutdown)
+	if err != nil {
+		log.Error("failed to create fallback", "err", err)
+		return nil, err
+	}
 	/*todo 6. 通知处理任务*/
 
 	out := &WorkerEntry{
@@ -76,6 +84,7 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		Finder:           finder,
 		Withdraw:         withdraw,
 		Internal:         internal,
+		Fallback:         fallback,
 		shutdown:         shutdown,
 	}
 	return out, nil
@@ -108,7 +117,13 @@ func (w *WorkerEntry) Start(ctx context.Context) error {
 		log.Error("failed to start internal", "err", err)
 		return err
 	}
-	/*todo 6. 启动回滚处理任务*/
+	/* 6. 启动回滚处理任务*/
+	err = w.Fallback.Start()
+	if err != nil {
+		log.Error("failed to start fallback", "err", err)
+		return err
+	}
+
 	/*todo 7. 启动通知处理任务*/
 	return nil
 }
@@ -138,7 +153,12 @@ func (w *WorkerEntry) Stop(ctx context.Context) error {
 		log.Error("failed to stop internal", "err", err)
 		return err
 	}
-	/*todo 6. 停止回滚任务*/
+	/* 6. 停止回滚任务*/
+	err = w.Fallback.Stop()
+	if err != nil {
+		log.Error("failed to stop fallback", "err", err)
+		return err
+	}
 	/*todo 7. 停止通知任务*/
 	return nil
 }

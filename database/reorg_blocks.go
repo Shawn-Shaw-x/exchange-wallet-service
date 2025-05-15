@@ -27,9 +27,9 @@ type reorgBlocksDB struct {
 	gorm *gorm.DB
 }
 
-func (r *reorgBlocksDB) StoreReorgBlocks(blocks []ReorgBlocks) error {
-	//TODO implement me
-	panic("implement me")
+func (r *reorgBlocksDB) StoreReorgBlocks(headers []ReorgBlocks) error {
+	result := r.gorm.CreateInBatches(&headers, len(headers))
+	return result.Error
 }
 
 func NewReorgBlocksDB(db *gorm.DB) ReorgBlocksDB {

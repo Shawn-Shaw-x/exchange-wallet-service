@@ -45,7 +45,7 @@ type BalancesDB interface {
 	StoreBalances(string, []*Balances) error
 	UpdateOrCreate(string, []*TokenBalance) error
 	UpdateBalanceListByTwoAddress(string, []*Balances) error
-
+	UpdateFallBackBalance(string, []*TokenBalance) error
 	//todo
 }
 
@@ -408,6 +408,128 @@ func (db *balancesDB) UpdateBalanceListByTwoAddress(requestId string, balanceLis
 		}
 		return nil
 	})
+}
+
+func (db *balancesDB) UpdateFallBackBalance(requestId string, balanceList []*TokenBalance) error {
+	if len(balanceList) == 0 {
+		return nil
+	}
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		for _, balance := range balanceList {
+			switch balance.TxType {
+			case constant.TxTypeDeposit:
+				return db.handleFallBackDeposit(tx, requestId, balance)
+			case constant.TxTypeWithdraw:
+				return db.handleFallBackWithdraw(tx, requestId, balance)
+			case constant.TxTypeCollection:
+				return db.handleFallBackCollection(tx, requestId, balance)
+			case constant.TxTypeHot2Cold:
+				return db.handleFallBackHotToCold(tx, requestId, balance)
+			case constant.TxTypeCold2Hot:
+				return db.handleFallBackColdToHot(tx, requestId, balance)
+			default:
+				return fmt.Errorf("unsupported transaction type: %s", balance.TxType)
+			}
+		}
+		return nil
+	})
+}
+
+/*冷转热余额回滚，冷+，热-*/
+func (db *balancesDB) handleFallBackColdToHot(tx *gorm.DB, requestId string, balance *TokenBalance) error {
+	coldWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeCold, balance.ToAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query cold wallet failed", "err", err)
+		return err
+	}
+	coldWallet.Balance = new(big.Int).Add(coldWallet.Balance, balance.Balance)
+	if err := db.UpdateAndSaveBalance(tx, requestId, coldWallet); err != nil {
+		return err
+	}
+
+	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.FromAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query hot wallet failed", "err", err)
+		return err
+	}
+	hotWallet.Balance = new(big.Int).Sub(hotWallet.Balance, balance.Balance)
+	return db.UpdateAndSaveBalance(tx, requestId, hotWallet)
+}
+
+/*归集余额回滚，用户余额+，热钱包余额-*/
+func (db *balancesDB) handleFallBackCollection(tx *gorm.DB, requestId string, balance *TokenBalance) error {
+	userWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeUser, balance.FromAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query user wallet failed", "err", err)
+		return err
+	}
+	userWallet.Balance = new(big.Int).Add(userWallet.Balance, balance.Balance)
+	if err := db.UpdateAndSaveBalance(tx, requestId, userWallet); err != nil {
+		return err
+	}
+
+	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.ToAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query hot wallet failed", "err", err)
+		return err
+	}
+	hotWallet.Balance = new(big.Int).Sub(hotWallet.Balance, balance.Balance)
+	return db.UpdateAndSaveBalance(tx, requestId, hotWallet)
+}
+
+/*回滚热转冷余额，热余额+ 冷余额-*/
+func (db *balancesDB) handleFallBackHotToCold(tx *gorm.DB, requestId string, balance *TokenBalance) error {
+	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.FromAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query hot wallet failed", "err", err)
+		return err
+	}
+	hotWallet.Balance = new(big.Int).Add(hotWallet.Balance, balance.Balance)
+	if err := db.UpdateAndSaveBalance(tx, requestId, hotWallet); err != nil {
+		return err
+	}
+
+	coldWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeCold, balance.ToAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query cold wallet failed", "err", err)
+		return err
+	}
+	coldWallet.Balance = new(big.Int).Sub(coldWallet.Balance, balance.Balance)
+	return db.UpdateAndSaveBalance(tx, requestId, coldWallet)
+}
+
+/*提现余额回滚，热钱包余额增加*/
+func (db *balancesDB) handleFallBackWithdraw(tx *gorm.DB, requestId string, balance *TokenBalance) error {
+	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.FromAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query hot wallet failed", "err", err)
+		return err
+	}
+
+	hotWallet.Balance = new(big.Int).Add(hotWallet.Balance, balance.Balance)
+	return db.UpdateAndSaveBalance(tx, requestId, hotWallet)
+}
+
+/*
+充值回滚（到达确认位的交易，不处理。未到达确认位的，理论上应减去 lockBalance）
+todo： change logic
+*/
+func (db *balancesDB) handleFallBackDeposit(tx *gorm.DB, requestId string, balance *TokenBalance) error {
+	userAddress, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeUser, balance.ToAddress, balance.TokenAddress)
+	if err != nil {
+		log.Error("Query user address failed", "err", err)
+		return err
+	}
+	log.Info("Processing handleDeposit",
+		"txType", balance.TxType,
+		"from", balance.FromAddress,
+		"to", balance.ToAddress,
+		"token", balance.TokenAddress,
+		"amount", balance.Balance,
+		"userAddress.Balance,", userAddress.Balance)
+	userAddress.Balance = new(big.Int).Sub(userAddress.Balance, balance.Balance)
+	log.Info("userAddress.Balance after", new(big.Int).Sub(userAddress.Balance, balance.Balance))
+	return db.UpdateAndSaveBalance(tx, requestId, userAddress)
 }
 
 func NewBalancesDB(db *gorm.DB) BalancesDB {
