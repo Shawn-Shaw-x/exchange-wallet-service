@@ -237,28 +237,24 @@ func (syncer *BaseSynchronizer) processBatch(headers []rpcclient.BlockHeader) er
 				* 冷转热：from 地址为冷钱包地址，to 地址为热钱包地址
 				 */
 
-				/* 1.充值*/
 				if !existFromAddress && (existToAddress && toAddressType == constant.AddressTypeUser) {
+					/* 1.充值*/
 					log.Info("Found deposit transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress)
 					txItem.TxType = constant.TxTypeDeposit
-				}
-				/* 2.提现*/
-				if (existFromAddress && FromAddressType == constant.AddressTypeHot) && !existToAddress {
+				} else if (existFromAddress && FromAddressType == constant.AddressTypeHot) && !existToAddress {
+					/* 2.提现*/
 					log.Info("Found withdraw transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress)
 					txItem.TxType = constant.TxTypeWithdraw
-				}
-				/* 3.归集*/
-				if (existFromAddress && FromAddressType == constant.AddressTypeUser) && (existToAddress && toAddressType == constant.AddressTypeHot) {
+				} else if (existFromAddress && FromAddressType == constant.AddressTypeUser) && (existToAddress && toAddressType == constant.AddressTypeHot) {
+					/* 3.归集*/
 					log.Info("Found collection transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress)
 					txItem.TxType = constant.TxTypeCollection
-				}
-				/* 4.热转冷*/
-				if (existFromAddress && FromAddressType == constant.AddressTypeHot) && (existToAddress && toAddressType == constant.AddressTypeCold) {
+				} else if (existFromAddress && FromAddressType == constant.AddressTypeHot) && (existToAddress && toAddressType == constant.AddressTypeCold) {
+					/* 4.热转冷*/
 					log.Info("Found hot2cold transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress)
 					txItem.TxType = constant.TxTypeHot2Cold
-				}
-				/* 5.冷转热*/
-				if (existFromAddress && FromAddressType == constant.AddressTypeCold) && (existToAddress && toAddressType == constant.AddressTypeHot) {
+				} else if (existFromAddress && FromAddressType == constant.AddressTypeCold) && (existToAddress && toAddressType == constant.AddressTypeHot) {
+					/* 5.冷转热*/
 					log.Info("Found cold2hot transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress)
 					txItem.TxType = constant.TxTypeCold2Hot
 				} else {

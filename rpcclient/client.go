@@ -84,7 +84,7 @@ func (c *ChainsUnionRpcClient) GetBlockInfo(blockNumber *big.Int) ([]*chainsunio
 		return nil, err
 	}
 	if blockInfo.Code == chainsunion.ReturnCode_ERROR {
-		log.Error("get block info fail", "err", err)
+		log.Warn("get block info fail", "err", err)
 		return nil, err
 	}
 	return blockInfo.Transactions, nil
@@ -103,7 +103,7 @@ func (c *ChainsUnionRpcClient) GetTransactionByHash(hash string) (*chainsunion.T
 		return nil, err
 	}
 	if txInfo.Code == chainsunion.ReturnCode_ERROR {
-		log.Error("get block info fail", "err", err)
+		log.Warn("get block info fail", "err", err)
 		return nil, err
 	}
 	return txInfo.Tx, nil

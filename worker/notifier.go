@@ -105,11 +105,19 @@ func (nf *Notifier) Start() error {
 					}
 					/*构建通知请求体*/
 					notifyRequest, err := nf.BuildNotifyTransaction(needNotifyDeposits, needNotifyWithdraws, needNotifyInternals)
+					if err != nil {
+						log.Error("Build notify transaction fail", "err", err)
+						return err
+					}
+					if notifyRequest.Txn == nil {
+						log.Warn("no notify transaction to notify, wait for notify")
+						continue
+					}
 
 					/*发送通知*/
 					notify, err := nf.notifier[businessId].BusinessNotify(notifyRequest)
 					if err != nil {
-						log.Error("notify business platform fail", "err")
+						log.Error("notify business platform fail", "err", err)
 						return err
 					}
 

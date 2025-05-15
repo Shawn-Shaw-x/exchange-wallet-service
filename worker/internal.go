@@ -70,7 +70,7 @@ func (in *Internal) Start() error {
 						continue
 					}
 					if unSendTransactionList == nil || len(unSendTransactionList) <= 0 {
-						log.Error("failed to query unsend internals list", "err", err)
+						log.Warn("failed to query unsend internals list", "err", err)
 						continue
 					}
 

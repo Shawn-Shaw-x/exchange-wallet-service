@@ -46,7 +46,7 @@ func (w *Withdraw) Start() error {
 						continue
 					}
 					if unSendTransactionList == nil || len(unSendTransactionList) == 0 {
-						log.Error("no withdraw transaction found", "businessId", business.BusinessUid)
+						log.Warn("no withdraw transaction found", "businessId", business.BusinessUid)
 						continue
 					}
 

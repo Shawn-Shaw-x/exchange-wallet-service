@@ -14,7 +14,7 @@ type NotifyRequest struct {
 }
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/exchange-wallet/notify", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("📩 Received a request")
 
 		body, err := io.ReadAll(r.Body)
@@ -40,9 +40,9 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	addr := "127.0.0.1:9777"
+	addr := "127.0.0.1:9997/exchange-wallet/notify"
 	log.Println("🚀 Mock Notify Server listening on", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := http.ListenAndServe("127.0.0.1:9997", nil); err != nil {
 		log.Fatal("❌ Server failed:", err)
 	}
 }

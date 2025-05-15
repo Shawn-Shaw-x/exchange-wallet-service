@@ -34,7 +34,8 @@ type Finder struct {
 	resourceCtx    context.Context
 	resourceCancel context.CancelFunc
 	/*协程管理*/
-	tasks tasks.Group
+	tasks  tasks.Group
+	ticker *time.Ticker
 }
 
 /*新建交易发现器*/
@@ -48,12 +49,13 @@ func NewFinder(synchronizer *BaseSynchronizer, cfg config.Config, shutdown conte
 		tasks: tasks.Group{HandleCrit: func(err error) {
 			shutdown(fmt.Errorf("fail to execute finder tasks: %w", err))
 		}},
+		ticker: time.NewTicker(cfg.ChainNode.WorkerInterval),
 	}, nil
 }
 
 /*启动交易发现器（消费者）*/
 func (f *Finder) Start() error {
-	/*协程异步处理任务*/
+	/*协程异步处理交易发现*/
 	f.tasks.Go(func() error {
 		log.Info("handle deposit task start")
 
@@ -63,18 +65,57 @@ func (f *Finder) Start() error {
 				log.Info("handle deposit task done")
 				return nil
 			case batch := <-f.BaseSynchronizer.businessChannels:
+				/*发现交易，处理*/
 				log.Info("deposit business channel", "batch length", len(batch))
 
-				/* 实现所有交易处理*/
 				if err := f.handleBatch(batch); err != nil {
 					log.Info("failed to handle batch, stopping L2 Synchronizer:", "err", err)
 					return fmt.Errorf("failed to handle batch, stopping L2 Synchronizer: %w", err)
+				}
+			case <-f.ticker.C:
+				/*交易确认，处理*/
+				log.Info("handle confirmation number task start")
+				err2 := f.handleConfirmations()
+				if err2 != nil {
+					return err2
 				}
 			}
 		}
 
 		return nil
 	})
+
+	return nil
+}
+
+/*交易确认位控制*/
+func (f *Finder) handleConfirmations() error {
+	businessList, err := f.BaseSynchronizer.database.Business.QueryBusinessList()
+	if err != nil {
+		log.Error("failed to query business list for confirms", "err", err)
+		return fmt.Errorf("failed to query business list for confirms: %w", err)
+	}
+
+	for _, business := range businessList {
+		err := f.BaseSynchronizer.database.Transaction(func(tx *database.DB) error {
+			latestBlock, err := tx.Blocks.LatestBlocks()
+			if err != nil {
+				log.Error("failed to get latest block for confirms", "err", err)
+				return err
+			}
+			if err := tx.Deposits.UpdateDepositsConfirms(business.BusinessUid, latestBlock.Number.Uint64(), uint64(f.confirms)); err != nil {
+				log.Error("failed to update confirms", "business", business.BusinessUid, "err", err)
+				return err
+			}
+
+			/*todo 1. withdraw / collect / hot2cold / cold2hot 确认位*/
+
+			return nil
+		})
+		if err != nil {
+			log.Error("failed to update confirms for business", "business", business.BusinessUid, "err", err)
+		}
+	}
 	return nil
 }
 
@@ -200,11 +241,6 @@ func (f *Finder) handleBatch(batch map[string]*BatchTransactions) error {
 					if err := tx.Deposits.StoreDeposits(business.BusinessUid, depositList); err != nil {
 						return err
 					}
-				}
-				/* 2. 充值确认位处理*/
-				if err := tx.Deposits.UpdateDepositsConfirms(business.BusinessUid, batch[business.BusinessUid].BlockHeight, uint64(f.confirms)); err != nil {
-					log.Info("Handle confims fail", "totalTx", "err", err)
-					return err
 				}
 				/* 3. 余额处理*/
 				if len(balances) > 0 {
