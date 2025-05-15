@@ -214,6 +214,7 @@ func (f *Finder) handleBatch(batch map[string]*BatchTransactions) error {
 					}
 				}
 				/* 4. 提现状态处理*/
+				/*todo 还需保存区块号、区块 hash，不然回滚会有 bug*/
 				if len(withdrawList) > 0 {
 					if err := tx.Withdraws.UpdateWithdrawStatusByTxHash(business.BusinessUid, constant.TxStatusWalletDone, withdrawList); err != nil {
 						return err
@@ -221,6 +222,7 @@ func (f *Finder) handleBatch(batch map[string]*BatchTransactions) error {
 				}
 
 				/* 5. 内部交易状态处理*/
+				/*todo 还需保存区块号、区块 hash，不然回滚会有 bug*/
 				if len(internals) > 0 {
 					if err := tx.Internals.UpdateInternalStatusByTxHash(business.BusinessUid, constant.TxStatusWalletDone, internals); err != nil {
 						return err
