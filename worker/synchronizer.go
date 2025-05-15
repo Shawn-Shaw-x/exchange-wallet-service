@@ -215,7 +215,7 @@ func (syncer *BaseSynchronizer) processBatch(headers []rpcclient.BlockHeader) er
 				if !existToAddress && !existFromAddress {
 					continue
 				}
-				log.Info("================ found transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress, "fromAddressType", FromAddressType, "toAddressType", toAddressType)
+				log.Info("found transaction", "txHash", tx.Hash, "from", fromAddress, "to", toAddress, "fromAddressType", FromAddressType, "toAddressType", toAddressType)
 
 				/*组装交易*/
 				txItem := &Transaction{

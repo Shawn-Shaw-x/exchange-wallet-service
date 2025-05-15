@@ -203,8 +203,9 @@ func (db *withdrawsDB) HandleFallBackWithdraw(requestId string, startBlock, EndB
 			}
 			return result.Error
 		}
-		withdrawsSingle.Status = constant.TxStatusFallback
-		err := db.gorm.Table("withdraws_" + requestId).Save(&withdrawsSingle).Error
+		err := db.gorm.Table("withdraws_"+requestId).
+			Where("guid = ?", withdrawsSingle.GUID).
+			Update("status", constant.TxStatusFallback).Error
 		if err != nil {
 			return err
 		}

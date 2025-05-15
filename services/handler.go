@@ -7,14 +7,12 @@ import (
 	"exchange-wallet-service/common/json2"
 	"exchange-wallet-service/database"
 	"exchange-wallet-service/database/constant"
-	"exchange-wallet-service/database/dynamic"
 	exchange_wallet_go "exchange-wallet-service/protobuf/exchange-wallet-go"
 	"exchange-wallet-service/rpcclient/chainsunion"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"math/big"
 	"strconv"
 	"time"
@@ -55,7 +53,7 @@ func (w *WalletBusinessService) BusinessRegister(ctx context.Context, request *e
 			Msg:  "store business db fail",
 		}, nil
 	}
-	dynamic.CreateTableFromTemplate(request.RequestId, w.db)
+	w.db.CreateTable.CreateTableFromTemplate(request.RequestId)
 	return &exchange_wallet_go.BusinessRegisterResponse{
 		Code: exchange_wallet_go.ReturnCode_SUCCESS,
 		Msg:  "register business success",
@@ -108,15 +106,15 @@ func (w *WalletBusinessService) ExportAddressByPublicKeys(ctx context.Context, r
 		retAddresses = append(retAddresses, item)
 	}
 
-	err := w.db.Gorm.Transaction(func(tx *gorm.DB) error {
+	err := w.db.Transaction(func(tx *database.DB) error {
 		/*地址存库*/
-		err := w.db.Address.StoreAddresses(request.RequestId, dbAddresses)
+		err := tx.Address.StoreAddresses(request.RequestId, dbAddresses)
 		if err != nil {
 			log.Error("failed to store addresses", "addresses", dbAddresses, "err", err)
 			return err
 		}
 		/*余额存库*/
-		err = w.db.Balances.StoreBalances(request.RequestId, balances)
+		err = tx.Balances.StoreBalances(request.RequestId, balances)
 		if err != nil {
 			log.Error("failed to store balances", "err", err)
 			return err
@@ -168,63 +166,55 @@ func (w *WalletBusinessService) BuildUnSignTransaction(ctx context.Context, requ
 
 	var returnTx *chainsunion.UnSignTransactionResponse
 	/*开启事务*/
-	err = w.db.Gorm.Transaction(func(tx *gorm.DB) error {
-		switch transactionType {
-		/*似乎用不到，充值交易是扫链触发的，而不是业务方调用*/
-		case constant.TxTypeDeposit:
-			err := w.StoreDeposits(ctx, request, guid, amountBig, gasLimit, feeInfo, transactionType)
-			if err != nil {
-				log.Error("failed to store deposit", "guid", guid, "err", err)
-				return err
-			}
-		case constant.TxTypeWithdraw:
-			if err := w.storeWithdraw(request, guid, amountBig, gasLimit, feeInfo, transactionType); err != nil {
-				log.Error("failed to store withdraw", "guid", guid, "err", err)
-				return err
-			}
-		case constant.TxTypeCollection, constant.TxTypeHot2Cold, constant.TxTypeCold2Hot:
-			if err := w.storeInternal(request, guid, amountBig, gasLimit, feeInfo, transactionType); err != nil {
-				log.Error("failed to store internal", "guid", guid, "err", err)
-				return err
-			}
-		default:
-			log.Error("invalid transaction type", "transactionType", transactionType)
-			err := errors.New("invalid transaction type")
-			return err
-		}
-
-		dynamicFeeTxReq := Eip1559DynamicFeeTx{
-			ChainId:              request.ChainId,
-			Nonce:                uint64(nonce),
-			FromAddress:          request.From,
-			ToAddress:            request.To,
-			GasLimit:             gasLimit,                        /*gas 总限制*/
-			MaxFeePerGas:         feeInfo.MaxPriorityFee.String(), /*每单位最大 gas = baseFee + priorityFee*/
-			MaxPriorityFeePerGas: feeInfo.MultipliedTip.String(),  /*矿工优先费*/
-			Amount:               request.Value,
-			ContractAddress:      contractAddress,
-		}
-		data := json2.ToJSON(dynamicFeeTxReq)
-		log.Info("WalletBusinessService CreateUnSignTransaction dynamicFeeTxReq", "dynamicFeeTxReq", json2.ToJSONString(dynamicFeeTxReq))
-		base64Str := base64.StdEncoding.EncodeToString(data)
-		unsignTx := &chainsunion.UnSignTransactionRequest{
-			Chain:    ChainName,
-			Network:  Network,
-			Base64Tx: base64Str,
-		}
-		log.Info("WalletBusinessService CreateUnSignTransaction unsignTx", "unsignTx", json2.ToJSONString(unsignTx))
-		returnTx, err = w.chainUnionClient.ChainsRpcClient.BuildUnSignTransaction(ctx, unsignTx)
-		log.Info("WalletBusinessService CreateUnSignTransaction returnTx", "returnTx", json2.ToJSONString(returnTx))
+	switch transactionType {
+	/*似乎用不到，充值交易是扫链触发的，而不是业务方调用*/
+	case constant.TxTypeDeposit:
+		err := w.StoreDeposits(ctx, request, guid, amountBig, gasLimit, feeInfo, transactionType)
 		if err != nil {
-			log.Error("WalletBusinessService CreateUnSignTransaction returnTx", "err", err)
-			return err
+			log.Error("failed to store deposit", "guid", guid, "err", err)
+			return nil, err
 		}
-		return nil
-	})
+	case constant.TxTypeWithdraw:
+		if err := w.storeWithdraw(request, guid, amountBig, gasLimit, feeInfo, transactionType); err != nil {
+			log.Error("failed to store withdraw", "guid", guid, "err", err)
+			return nil, err
+		}
+	case constant.TxTypeCollection, constant.TxTypeHot2Cold, constant.TxTypeCold2Hot:
+		if err := w.storeInternal(request, guid, amountBig, gasLimit, feeInfo, transactionType); err != nil {
+			log.Error("failed to store internal", "guid", guid, "err", err)
+			return nil, err
+		}
+	default:
+		log.Error("invalid transaction type", "transactionType", transactionType)
+		err := errors.New("invalid transaction type")
+		return nil, err
+	}
+
+	dynamicFeeTxReq := Eip1559DynamicFeeTx{
+		ChainId:              request.ChainId,
+		Nonce:                uint64(nonce),
+		FromAddress:          request.From,
+		ToAddress:            request.To,
+		GasLimit:             gasLimit,                        /*gas 总限制*/
+		MaxFeePerGas:         feeInfo.MaxPriorityFee.String(), /*每单位最大 gas = baseFee + priorityFee*/
+		MaxPriorityFeePerGas: feeInfo.MultipliedTip.String(),  /*矿工优先费*/
+		Amount:               request.Value,
+		ContractAddress:      contractAddress,
+	}
+	data := json2.ToJSON(dynamicFeeTxReq)
+	log.Info("WalletBusinessService CreateUnSignTransaction dynamicFeeTxReq", "dynamicFeeTxReq", json2.ToJSONString(dynamicFeeTxReq))
+	base64Str := base64.StdEncoding.EncodeToString(data)
+	unsignTx := &chainsunion.UnSignTransactionRequest{
+		Chain:    ChainName,
+		Network:  Network,
+		Base64Tx: base64Str,
+	}
+	log.Info("WalletBusinessService CreateUnSignTransaction unsignTx", "unsignTx", json2.ToJSONString(unsignTx))
+	returnTx, err = w.chainUnionClient.ChainsRpcClient.BuildUnSignTransaction(ctx, unsignTx)
+	log.Info("WalletBusinessService CreateUnSignTransaction returnTx", "returnTx", json2.ToJSONString(returnTx))
 	if err != nil {
-		log.Error("database transaction execution fail", "err", err)
-		response.Msg = "database transaction execution fail" + err.Error()
-		return response, err
+		log.Error("WalletBusinessService CreateUnSignTransaction returnTx", "err", err)
+		return nil, err
 	}
 	response.Code = exchange_wallet_go.ReturnCode_SUCCESS
 	response.Msg = "build unsign transaction success"

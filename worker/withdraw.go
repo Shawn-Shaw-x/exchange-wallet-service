@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"gorm.io/gorm"
 	"time"
 )
 
@@ -78,11 +77,11 @@ func (w *Withdraw) Start() error {
 					/*数据库重试*/
 					if _, err := retry.Do[interface{}](w.resourceCtx, 10, retryStrategy, func() (interface{}, error) {
 						/*事务*/
-						if err := w.db.Gorm.Transaction(func(tx *gorm.DB) error {
+						if err := w.db.Transaction(func(tx *database.DB) error {
 							/*更新余额表*/
 							if len(balanceList) > 0 {
 								log.Info("update withdraw balance transaction", "totalTx", len(balanceList))
-								if err := w.db.Balances.UpdateBalanceListByTwoAddress(business.BusinessUid, balanceList); err != nil {
+								if err := tx.Balances.UpdateBalanceListByTwoAddress(business.BusinessUid, balanceList); err != nil {
 									log.Error("failed to update withdraw balance transaction", "err", err)
 									return err
 								}
@@ -90,7 +89,7 @@ func (w *Withdraw) Start() error {
 
 							/*更新提现表*/
 							if len(unSendTransactionList) > 0 {
-								err = w.db.Withdraws.UpdateWithdrawListById(business.BusinessUid, unSendTransactionList)
+								err = tx.Withdraws.UpdateWithdrawListById(business.BusinessUid, unSendTransactionList)
 								if err != nil {
 									log.Error("update withdraw status fail", "err", err)
 									return err

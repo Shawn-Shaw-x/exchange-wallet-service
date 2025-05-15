@@ -200,7 +200,7 @@ func (db *internalsDB) UpdateInternalListById(requestId string, internalsList []
 	})
 }
 
-/*内部交易回滚*/
+/*内部交易回滚(修改记录)*/
 func (db *internalsDB) HandleFallBackInternals(requestId string, startBlock, EndBlock *big.Int) error {
 	for indexBlock := startBlock.Uint64(); indexBlock < EndBlock.Uint64(); indexBlock++ {
 		var internalsSingle = Internals{}
@@ -212,8 +212,9 @@ func (db *internalsDB) HandleFallBackInternals(requestId string, startBlock, End
 			return result.Error
 		}
 		log.Info("Handle fallBack internal transactions", "txStatusFallBack", constant.TxStatusFallback)
-		internalsSingle.Status = constant.TxStatusFallback
-		err := db.gorm.Table("internals_" + requestId).Save(&internalsSingle).Error
+		err := db.gorm.Table("internals_"+requestId).
+			Where("guid = ?", internalsSingle.GUID).
+			Update("status", constant.TxStatusFallback).Error
 		if err != nil {
 			return err
 		}

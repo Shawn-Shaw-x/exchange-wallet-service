@@ -59,7 +59,7 @@ func (db *transactionsDB) StoreTransactions(requestId string, transactionsList [
 func (db *transactionsDB) QueryFallBackTransactions(requestId string, startBlock, EndBlock *big.Int) ([]*Transactions, error) {
 	log.Info("Query fallback transactions", "startBlock", startBlock.String(), "EndBlock", EndBlock.String())
 	var fallbackTransactions []*Transactions
-	result := db.gorm.Table("transactions_"+requestId).Where("block_number >= ? and block_number <= ?", startBlock.Uint64(), EndBlock.Uint64()).Find(&fallbackTransactions)
+	result := db.gorm.Table("transactions_"+requestId).Where("block_number >= ? and block_number <= ? and status = ?", startBlock.Uint64(), EndBlock.Uint64(), constant.TxStatusSuccess).Find(&fallbackTransactions)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -69,7 +69,7 @@ func (db *transactionsDB) QueryFallBackTransactions(requestId string, startBlock
 	return fallbackTransactions, nil
 }
 
-/*回滚交易流水表*/
+/*回滚交易流水表(实际应新增一条回滚记录，之前的记录不变)*/
 func (db *transactionsDB) HandleFallBackTransactions(requestId string, startBlock, EndBlock *big.Int) error {
 	for indexBlock := startBlock.Uint64(); indexBlock <= EndBlock.Uint64(); indexBlock++ {
 		var transactionSingle = Transactions{}
@@ -81,8 +81,9 @@ func (db *transactionsDB) HandleFallBackTransactions(requestId string, startBloc
 			return result.Error
 		}
 		log.Info("Handle fallBack transactions", "txStatusFallBack", constant.TxStatusFallback)
-		transactionSingle.Status = constant.TxStatusFallback
-		err := db.gorm.Table("transactions_" + requestId).Save(&transactionSingle).Error
+		err := db.gorm.Table("transactions_"+requestId).
+			Where("guid = ?", transactionSingle.GUID).
+			Update("status", constant.TxStatusFallback).Error
 		if err != nil {
 			return err
 		}

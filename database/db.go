@@ -4,6 +4,7 @@ import (
 	"context"
 	"exchange-wallet-service/common/retry"
 	"exchange-wallet-service/config"
+	"exchange-wallet-service/database/dynamic"
 	"fmt"
 	"github.com/pkg/errors"
 	"gorm.io/driver/postgres"
@@ -20,7 +21,8 @@ import (
 
 // DB 封装了 GORM 的数据库连接以及后续可能扩展的其他表接口。
 type DB struct {
-	Gorm         *gorm.DB
+	gorm         *gorm.DB
+	CreateTable  dynamic.CreateTableDB
 	Business     BusinessDB
 	Blocks       BlocksDB
 	ReorgBlocks  ReorgBlocksDB
@@ -35,7 +37,7 @@ type DB struct {
 
 // Close 关闭底层数据库连接。
 func (db *DB) Close() error {
-	sql, err := db.Gorm.DB()
+	sql, err := db.gorm.DB()
 	if err != nil {
 		return err
 	}
@@ -55,13 +57,34 @@ func (db *DB) ExecuteSQLMigration(migrationsFolder string) error {
 		if readErr != nil {
 			return errors.Wrap(readErr, fmt.Sprintf("failed to read SQL file %s", path))
 		}
-		execErr := db.Gorm.Exec(string(fileContent)).Error
+		execErr := db.gorm.Exec(string(fileContent)).Error
 		if execErr != nil {
 			return errors.Wrap(execErr, fmt.Sprintf("failed to execute SQL file %s", path))
 		}
 		return nil
 	})
 	return err
+}
+
+/*开启事务封装*/
+func (db *DB) Transaction(fn func(db *DB) error) error {
+	return db.gorm.Transaction(func(tx *gorm.DB) error {
+		txDB := &DB{
+			gorm:         tx,
+			CreateTable:  dynamic.NewCreateTableDB(tx),
+			Blocks:       NewBlocksDB(tx),
+			ReorgBlocks:  NewReorgBlocksDB(tx),
+			Address:      NewAddressDB(tx),
+			Balances:     NewBalancesDB(tx),
+			Deposits:     NewDepositsDB(tx),
+			Withdraws:    NewWithdrawsDB(tx),
+			Transactions: NewTransactionsDB(tx),
+			Tokens:       NewTokensDB(tx),
+			Business:     NewBusinessDB(tx),
+			Internals:    NewInternalsDB(tx),
+		}
+		return fn(txDB)
+	})
 }
 
 // NewDB 根据配置创建一个新的数据库连接，并封装成 DB 结构体。
@@ -107,7 +130,8 @@ func NewDB(ctx context.Context, dbConfig config.DBConfig) (*DB, error) {
 	}
 
 	db := &DB{
-		Gorm:         gormDbBox,
+		gorm:         gormDbBox,
+		CreateTable:  dynamic.NewCreateTableDB(gormDbBox),
 		Business:     NewBusinessDB(gormDbBox),
 		Blocks:       NewBlocksDB(gormDbBox),
 		ReorgBlocks:  NewReorgBlocksDB(gormDbBox),

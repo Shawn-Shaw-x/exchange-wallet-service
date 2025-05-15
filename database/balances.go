@@ -437,7 +437,7 @@ func (db *balancesDB) UpdateFallBackBalance(requestId string, balanceList []*Tok
 
 /*冷转热余额回滚，冷+，热-*/
 func (db *balancesDB) handleFallBackColdToHot(tx *gorm.DB, requestId string, balance *TokenBalance) error {
-	coldWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeCold, balance.ToAddress, balance.TokenAddress)
+	coldWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeCold, balance.FromAddress, balance.TokenAddress)
 	if err != nil {
 		log.Error("Query cold wallet failed", "err", err)
 		return err
@@ -447,7 +447,7 @@ func (db *balancesDB) handleFallBackColdToHot(tx *gorm.DB, requestId string, bal
 		return err
 	}
 
-	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.FromAddress, balance.TokenAddress)
+	hotWallet, err := db.QueryWalletBalanceByTokenAndAddress(requestId, constant.AddressTypeHot, balance.ToAddress, balance.TokenAddress)
 	if err != nil {
 		log.Error("Query hot wallet failed", "err", err)
 		return err

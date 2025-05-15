@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"math/big"
 	"time"
 )
@@ -194,43 +193,43 @@ func (f *Finder) handleBatch(batch map[string]*BatchTransactions) error {
 		/*重试*/
 		if _, err := retry.Do[interface{}](f.resourceCtx, 10, retryStrategy, func() (interface{}, error) {
 			/*事务*/
-			if err := f.BaseSynchronizer.database.Gorm.Transaction(func(tx *gorm.DB) error {
+			if err := f.BaseSynchronizer.database.Transaction(func(tx *database.DB) error {
 				/* 1. 充值业务处理*/
 				if len(depositList) > 0 {
 					log.Info("Store deposit transaction success", "totalTx", len(depositList))
-					if err := f.BaseSynchronizer.database.Deposits.StoreDeposits(business.BusinessUid, depositList); err != nil {
+					if err := tx.Deposits.StoreDeposits(business.BusinessUid, depositList); err != nil {
 						return err
 					}
 				}
 				/* 2. 充值确认位处理*/
-				if err := f.BaseSynchronizer.database.Deposits.UpdateDepositsConfirms(business.BusinessUid, batch[business.BusinessUid].BlockHeight, uint64(f.confirms)); err != nil {
+				if err := tx.Deposits.UpdateDepositsConfirms(business.BusinessUid, batch[business.BusinessUid].BlockHeight, uint64(f.confirms)); err != nil {
 					log.Info("Handle confims fail", "totalTx", "err", err)
 					return err
 				}
 				/* 3. 余额处理*/
 				if len(balances) > 0 {
 					log.Info("Handle balances transaction success", "totalTx", len(balances))
-					if err := f.BaseSynchronizer.database.Balances.UpdateOrCreate(business.BusinessUid, balances); err != nil {
+					if err := tx.Balances.UpdateOrCreate(business.BusinessUid, balances); err != nil {
 						return err
 					}
 				}
 				/* 4. 提现状态处理*/
 				if len(withdrawList) > 0 {
-					if err := f.BaseSynchronizer.database.Withdraws.UpdateWithdrawStatusByTxHash(business.BusinessUid, constant.TxStatusWalletDone, withdrawList); err != nil {
+					if err := tx.Withdraws.UpdateWithdrawStatusByTxHash(business.BusinessUid, constant.TxStatusWalletDone, withdrawList); err != nil {
 						return err
 					}
 				}
 
 				/* 5. 内部交易状态处理*/
 				if len(internals) > 0 {
-					if err := f.BaseSynchronizer.database.Internals.UpdateInternalStatusByTxHash(business.BusinessUid, constant.TxStatusWalletDone, internals); err != nil {
+					if err := tx.Internals.UpdateInternalStatusByTxHash(business.BusinessUid, constant.TxStatusWalletDone, internals); err != nil {
 						return err
 					}
 				}
 
 				/* 6. 交易流水表入库*/
 				if len(transactionFlowList) > 0 {
-					if err := f.BaseSynchronizer.database.Transactions.StoreTransactions(business.BusinessUid, transactionFlowList, uint64(len(transactionFlowList))); err != nil {
+					if err := tx.Transactions.StoreTransactions(business.BusinessUid, transactionFlowList, uint64(len(transactionFlowList))); err != nil {
 						return err
 					}
 				}

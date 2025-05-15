@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"gorm.io/gorm"
 	"time"
 )
 
@@ -100,11 +99,11 @@ func (in *Internal) Start() error {
 					}
 					retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 					if _, err := retry.Do[interface{}](in.resourceCtx, 10, retryStrategy, func() (interface{}, error) {
-						if err := in.db.Gorm.Transaction(func(tx *gorm.DB) error {
+						if err := in.db.Transaction(func(tx *database.DB) error {
 							/*处理内部交易余额*/
 							if len(balanceList) > 0 {
 								log.Info("Update address balance", "totalTx", len(balanceList))
-								if err := in.db.Balances.UpdateBalanceListByTwoAddress(business.BusinessUid, balanceList); err != nil {
+								if err := tx.Balances.UpdateBalanceListByTwoAddress(business.BusinessUid, balanceList); err != nil {
 									log.Error("Update address balance fail", "err", err)
 									return err
 								}
@@ -112,7 +111,7 @@ func (in *Internal) Start() error {
 							}
 							/*保存内部交易状态*/
 							if len(unSendTransactionList) > 0 {
-								err = in.db.Internals.UpdateInternalListById(business.BusinessUid, unSendTransactionList)
+								err = tx.Internals.UpdateInternalListById(business.BusinessUid, unSendTransactionList)
 								if err != nil {
 									log.Error("update internals status fail", "err", err)
 									return err

@@ -158,8 +158,9 @@ func (db *depositsDB) HandleFallBackDeposits(requestId string, startBlock, EndBl
 			return result.Error
 		}
 		log.Info("Handle fallBack deposit transactions", "txStatusFallBack", constant.TxStatusFallback, "startBlock", startBlock.String(), "EndBlock", EndBlock.String())
-		depositsSingle.Status = constant.TxStatusFallback
-		err := db.gorm.Table("deposits_" + requestId).Save(&depositsSingle).Error
+		err := db.gorm.Table("deposits_"+requestId).
+			Where("guid = ?", depositsSingle.GUID).
+			Update("status", constant.TxStatusFallback).Error
 		if err != nil {
 			return err
 		}

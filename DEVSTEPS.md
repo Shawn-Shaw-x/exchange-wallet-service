@@ -672,5 +672,16 @@ func (in *Internal) Start() error {
 
 ## 11. 回滚业务实现
 
+
+### 回滚测试
+1. 修改数据库，模拟区块发生回滚，区块 hash 不正确
+![img_2.png](img_2.png)
+2. 在不连续的区块上，伪造一笔交易，测试回滚
+![img_3.png](img_3.png)
+2. 回滚之前的 transaction 流水表、balance 余额表
+![img_1.png](img_1.png)
+![img.png](img.png)
+3. 回滚之后的 blocks 表、reorgBlocks表、流水表、余额表
+![img_4.png](img_4.png)
 ## 12. 通知业务实现
 

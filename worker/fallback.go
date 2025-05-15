@@ -11,7 +11,6 @@ import (
 	"exchange-wallet-service/rpcclient"
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
-	"gorm.io/gorm"
 	"math/big"
 	"time"
 )
@@ -68,7 +67,6 @@ func (fb *Fallback) Start() error {
 			case <-fb.ticker.C:
 				if fb.BaseSynchronizer.isFallback {
 					log.Info("fallback task", "synchronizer fallback handle", fb.BaseSynchronizer.fallbackBlockHeader.Number)
-					log.Info("notified of fallback", "fallback block number", fb.BaseSynchronizer.fallbackBlockHeader.Number)
 					if err := fb.onFallback(fb.BaseSynchronizer.fallbackBlockHeader); err != nil {
 						log.Error("failed to notify fallback", "err", err)
 					}
@@ -127,11 +125,10 @@ func (fb *Fallback) onFallback(fallbackBlockHeader *rpcclient.BlockHeader) error
 
 	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
 	if _, err := retry.Do[interface{}](fb.resourceCtx, 10, retryStrategy, func() (interface{}, error) {
-		if err := fb.database.Gorm.Transaction(func(tx *gorm.DB) error {
-
+		if err := fb.database.Transaction(func(tx *database.DB) error {
 			if len(reorgBlockHeaders) > 0 {
 				/*被回滚的区块备份*/
-				if err := fb.database.ReorgBlocks.StoreReorgBlocks(reorgBlockHeaders); err != nil {
+				if err := tx.ReorgBlocks.StoreReorgBlocks(reorgBlockHeaders); err != nil {
 					log.Error("failed to store reorg blocks", "err", err)
 					return err
 				}
@@ -139,7 +136,7 @@ func (fb *Fallback) onFallback(fallbackBlockHeader *rpcclient.BlockHeader) error
 			}
 
 			if len(chainBlocks) > 0 {
-				if err := fb.database.Blocks.DeleteBlocksByNumber(chainBlocks); err != nil {
+				if err := tx.Blocks.DeleteBlocksByNumber(chainBlocks); err != nil {
 					return err
 				}
 				log.Info("delete block success", "totalTx", len(chainBlocks))
@@ -148,34 +145,33 @@ func (fb *Fallback) onFallback(fallbackBlockHeader *rpcclient.BlockHeader) error
 			if fallbackBlockHeader.Number.Cmp(entryBlockHeader.Number) > 0 {
 				for _, business := range businessList {
 					/*充值回滚*/
-					if err := fb.database.Deposits.HandleFallBackDeposits(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
+					if err := tx.Deposits.HandleFallBackDeposits(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
 						log.Error("failed to handle fallback deposits", "err", err)
 						return err
 					}
 					/*提现回滚*/
-					if err := fb.database.Withdraws.HandleFallBackWithdraw(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
+					if err := tx.Withdraws.HandleFallBackWithdraw(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
 						log.Error("failed to handle fallback withdraws", "err", err)
 						return err
 					}
 
 					/*内部交易回滚*/
-					if err := fb.database.Internals.HandleFallBackInternals(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
+					if err := tx.Internals.HandleFallBackInternals(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
 						log.Error("failed to handle fallback internals", "err", err)
 						return err
 					}
 					/*流水表回滚*/
-					if err := fb.database.Transactions.HandleFallBackTransactions(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
+					if err := tx.Transactions.HandleFallBackTransactions(business.BusinessUid, entryBlockHeader.Number, fallbackBlockHeader.Number); err != nil {
 						log.Error("failed to handle fallback transactions", "err", err)
 						return err
 					}
 					/*余额回滚*/
-					if err := fb.database.Balances.UpdateFallBackBalance(business.BusinessUid, fallbackBalances); err != nil {
+					if err := tx.Balances.UpdateFallBackBalance(business.BusinessUid, fallbackBalances); err != nil {
 						log.Error("failed to update fallback balance", "err", err)
 						return err
 					}
 				}
 			}
-
 			return nil
 		}); err != nil {
 			log.Error("unable to persist fallback batch", "err", err)
