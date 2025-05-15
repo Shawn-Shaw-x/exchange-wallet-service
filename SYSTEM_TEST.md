@@ -187,3 +187,23 @@
 
 ![img_10.png](images/afterCold2Hot.png)
 
+### 8. 回滚测试
+1. 修改数据库，模拟区块发生回滚，区块 hash 不正确
+
+![img_2.png](images/changeBlockHash.png)
+
+2. 在不连续的区块上，伪造一笔交易，测试回滚
+
+![img_3.png](images/fakeTransaction.png)
+
+2. 回滚之前的 transaction 流水表、balance 余额表
+
+![img_1.png](images/beforeFallbackC2H.png)
+
+![img.png](images/beforeFallbackBalanceC2H.png)
+
+3. 回滚之后的 blocks 表、reorgBlocks表、流水表、余额表
+   ![img.png](images/afterFallbackBlock.png)
+   ![img.png](images/afterFallbackReorg.png)
+   ![img.png](images/afterFallbackTransaction.png)
+   ![img_4.png](images/afterFallbackBalance.png)

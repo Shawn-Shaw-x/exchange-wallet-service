@@ -140,6 +140,9 @@ make test
 
 ![img.png](images/internalStruct.png)
 
+### 回滚业务的流程
+
+![img_5.png](images/fallbackStruct.png)
 
 ## 👬🏻 Partners
 
