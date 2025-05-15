@@ -24,6 +24,8 @@ type WorkerEntry struct {
 
 	Fallback *Fallback
 
+	Notifier *Notifier
+
 	shutdown context.CancelCauseFunc
 	stopped  atomic.Bool
 }
@@ -77,7 +79,12 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		log.Error("failed to create fallback", "err", err)
 		return nil, err
 	}
-	/*todo 6. 通知处理任务*/
+	/* 6. 通知处理任务*/
+	notifier, err := NewNotifier(db, shutdown)
+	if err != nil {
+		log.Error("failed to create notifier", "err", err)
+		return nil, err
+	}
 
 	out := &WorkerEntry{
 		BaseSynchronizer: synchronizer,
@@ -85,6 +92,7 @@ func NewAllWorker(ctx context.Context, cfg *config.Config, shutdown context.Canc
 		Withdraw:         withdraw,
 		Internal:         internal,
 		Fallback:         fallback,
+		Notifier:         notifier,
 		shutdown:         shutdown,
 	}
 	return out, nil
@@ -124,7 +132,12 @@ func (w *WorkerEntry) Start(ctx context.Context) error {
 		return err
 	}
 
-	/*todo 7. 启动通知处理任务*/
+	/* 7. 启动通知处理任务*/
+	err = w.Notifier.Start()
+	if err != nil {
+		log.Error("failed to start notifier", "err", err)
+		return err
+	}
 	return nil
 }
 
@@ -159,7 +172,12 @@ func (w *WorkerEntry) Stop(ctx context.Context) error {
 		log.Error("failed to stop fallback", "err", err)
 		return err
 	}
-	/*todo 7. 停止通知任务*/
+	/* 7. 停止通知任务*/
+	err = w.Notifier.Stop()
+	if err != nil {
+		log.Error("failed to stop notifier", "err", err)
+		return err
+	}
 	return nil
 }
 

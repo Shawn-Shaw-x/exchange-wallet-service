@@ -46,6 +46,8 @@ type Internals struct {
 type InternalsView interface {
 	QueryInternalsById(requestId string, guid string) (*Internals, error)
 	UnSendInternalsList(requestId string) ([]*Internals, error)
+	QueryNotifyInternal(requestId string) ([]*Internals, error)
+
 	// todo
 }
 
@@ -220,4 +222,16 @@ func (db *internalsDB) HandleFallBackInternals(requestId string, startBlock, End
 		}
 	}
 	return nil
+}
+
+/*查询需要通知的内部交易*/
+func (db *internalsDB) QueryNotifyInternal(requestId string) ([]*Internals, error) {
+	var notifyInternals []*Internals
+	result := db.gorm.Table("internals_"+requestId).
+		Where("status = ? or status = ?", constant.TxStatusWalletDone, constant.TxStatusNotified).
+		Find(&notifyInternals)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return notifyInternals, nil
 }
