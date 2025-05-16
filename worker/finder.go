@@ -98,11 +98,12 @@ func (f *Finder) handleConfirmations() error {
 
 	for _, business := range businessList {
 		err := f.BaseSynchronizer.database.Transaction(func(tx *database.DB) error {
-			latestBlock, err := tx.Blocks.LatestBlocks()
+			latestBlock, err := f.BaseSynchronizer.rpcClient.GetBlockHeader(nil)
 			if err != nil {
 				log.Error("failed to get latest block for confirms", "err", err)
 				return err
 			}
+
 			if err := tx.Deposits.UpdateDepositsConfirms(business.BusinessUid, latestBlock.Number.Uint64(), uint64(f.confirms)); err != nil {
 				log.Error("failed to update confirms", "business", business.BusinessUid, "err", err)
 				return err
