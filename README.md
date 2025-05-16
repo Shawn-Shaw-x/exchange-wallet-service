@@ -144,6 +144,10 @@ make test
 
 ![img_5.png](images/fallbackStruct.png)
 
+## 通知业务的流程
+
+![img_3.png](images/notifyStruct.png)
+
 ## 👬🏻 Partners
 
 - shawn_shaw: cola_ocean@foxmail.com

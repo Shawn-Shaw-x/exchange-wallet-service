@@ -960,7 +960,7 @@ func (fb *Fallback) findFallbackEntry(fallbackBlockHeader *rpcclient.BlockHeader
 
 ## 通知业务的流程图
 
-![img_3.png](img_3.png)
+![img_3.png](images/notifyStruct.png)
 
 交易所钱包系统中，我们的交易发现器会将交易从链上发现，并且变更交易的状态到数据库中。
 1. 通过查询数据库获取需要发送通知但还未通知的交易。例如充值上账、充值确认、提现已广播、交易回滚等。
@@ -1125,9 +1125,9 @@ func main() {
 
 ```
 2. 启动这个模拟程序
-![img.png](img.png)
+![img.png](images/businessListenner.png)
 3. 充值一笔试试，等待 10 个确认位
-![img_1.png](img_1.png)
+![img_1.png](images/afterBusinessListener.png)
 
 至此，钱包的所有业务解析完毕！！！
 后续，钱包有一些 bug 以及优化什么的，等我慢慢 fix 吧 hhh
