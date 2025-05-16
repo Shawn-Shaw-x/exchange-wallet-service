@@ -110,7 +110,7 @@ func (nf *Notifier) Start() error {
 					if err != nil {
 						log.Error("notify business platform fail", "err", err)
 					}
-					log.Info("==================", "business", businessId, "notify", notify, "deposits", needNotifyDeposits, "err", err)
+					log.Info("After notify", "business", businessId, "notifyStatus", notify, "deposits", needNotifyDeposits, "err", err)
 					err = nf.AfterNotify(businessId, notify, needNotifyDeposits, needNotifyWithdraws, needNotifyInternals)
 					if err != nil {
 						log.Error("change notified status fail", "err", err)
