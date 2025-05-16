@@ -254,3 +254,8 @@ func main() {
    ![img.png](images/businessListenner.png)
 3. 充值一笔试试，等待 10 个确认位
    ![img_1.png](images/afterBusinessListener.png)
+
+## 10. 总体测试
+分别测试充值、提现、归集、转冷、转热、回滚、通知，
+所有业务正常执行。（完结撒花）
+![img.png](images/allTransactions.png)
