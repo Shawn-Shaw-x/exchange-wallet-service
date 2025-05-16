@@ -947,14 +947,60 @@ func (fb *Fallback) findFallbackEntry(fallbackBlockHeader *rpcclient.BlockHeader
 
 ## 12. 通知业务实现
 
+## 通知业务是什么
+
+## 通知业务的流程图
+
+## 通知业务的实现
+
 
 ## 通知业务测试
 1. 写个程序用于模拟项目方（钱包层）接收通知
 ```go
+type NotifyRequest struct {
+	Txn []httpclient.Transaction `json:"txn"`
+}
+
+func main() {
+	http.HandleFunc("/exchange-wallet/notify", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("📩 Received a request")
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "failed to read body", http.StatusInternalServerError)
+			return
+		}
+		defer r.Body.Close()
+
+		var req NotifyRequest
+		if err := json.Unmarshal(body, &req); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			log.Println("❌ Invalid JSON:", err)
+			return
+		}
+
+		// 打印格式化的 JSON
+		fmt.Println("🧾 Parsed JSON request:")
+		pretty, _ := json.MarshalIndent(req, "", "  ")
+		fmt.Println(string(pretty))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"success":true}`))
+	})
+
+	addr := "127.0.0.1:9997/exchange-wallet/notify"
+	log.Println("🚀 Mock Notify Server listening on", addr)
+	if err := http.ListenAndServe("127.0.0.1:9997", nil); err != nil {
+		log.Fatal("❌ Server failed:", err)
+	}
+}
 
 ```
 2. 启动这个模拟程序
-
+![img.png](img.png)
 3. 充值一笔试试，等待 10 个确认位
+![img_1.png](img_1.png)
 
-4. 
+至此，钱包业务解析完毕！！！
+后续，钱包有一些 bug 以及优化什么的，等我慢慢 fix 吧 hhh
+如果有愿意参加这个开源项目去参与贡献的，欢迎联系我（或者直接 github 上 issue 交流也可以的）
