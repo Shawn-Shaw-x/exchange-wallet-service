@@ -226,7 +226,7 @@ func (db *balancesDB) handleDeposit(tx *gorm.DB, requestId string, balance *Toke
 		"amount", balance.Balance,
 		"userAddress.Balance,", userAddress.Balance)
 	userAddress.Balance = new(big.Int).Add(userAddress.Balance, balance.Balance)
-	log.Info("userAddress.Balance after", new(big.Int).Add(userAddress.Balance, balance.Balance))
+	log.Info("userAddress.Balance after", "Balance after", new(big.Int).Add(userAddress.Balance, balance.Balance))
 	return db.UpdateAndSaveBalance(tx, requestId, userAddress)
 }
 
@@ -528,7 +528,7 @@ func (db *balancesDB) handleFallBackDeposit(tx *gorm.DB, requestId string, balan
 		"amount", balance.Balance,
 		"userAddress.Balance,", userAddress.Balance)
 	userAddress.Balance = new(big.Int).Sub(userAddress.Balance, balance.Balance)
-	log.Info("userAddress.Balance after", new(big.Int).Sub(userAddress.Balance, balance.Balance))
+	log.Info("userAddress.Balance after", "Balance after", new(big.Int).Sub(userAddress.Balance, balance.Balance))
 	return db.UpdateAndSaveBalance(tx, requestId, userAddress)
 }
 

@@ -122,7 +122,7 @@ func (db *depositsDB) UpdateDepositsConfirms(requestId string, blockNumber uint6
 		var unConfirmDeposits []*Deposits
 		/*查出未确认交易*/
 		result := tx.Table("deposits_"+requestId).
-			Where("block_number <= ? AND status = ? AND status != ?", blockNumber, constant.TxStatusBroadcasted, constant.TxStatusFallback).
+			Where("block_number <= ? AND status = ? AND status != ?", blockNumber, constant.TxStatusSuccess, constant.TxStatusFallback).
 			Find(&unConfirmDeposits)
 		if result.Error != nil {
 			return result.Error
@@ -174,7 +174,7 @@ func (db *depositsDB) HandleFallBackDeposits(requestId string, startBlock, EndBl
 func (db *depositsDB) QueryNotifyDeposits(requestId string) ([]*Deposits, error) {
 	var notifyDeposits []*Deposits
 	result := db.gorm.Table("deposits_"+requestId).
-		Where("status = ? or status = ?", constant.TxStatusWalletDone, constant.TxStatusNotified).
+		Where("status = ? ", constant.TxStatusWalletDone).
 		Find(&notifyDeposits) // Correctly populate the slice
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

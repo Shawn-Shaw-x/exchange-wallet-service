@@ -37,7 +37,7 @@ func main() {
 		fmt.Println(string(pretty))
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		w.Write([]byte(`{"success":true}`))
 	})
 
 	addr := "127.0.0.1:9997/exchange-wallet/notify"

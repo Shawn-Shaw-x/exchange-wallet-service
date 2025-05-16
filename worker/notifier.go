@@ -83,33 +83,24 @@ func (nf *Notifier) Start() error {
 					needNotifyDeposits, err := nf.db.Deposits.QueryNotifyDeposits(businessId)
 					if err != nil {
 						log.Error("Query notify deposits fail", "err", err)
-						return err
 					}
 					/*查出应通知的提现*/
 					needNotifyWithdraws, err := nf.db.Withdraws.QueryNotifyWithdraws(businessId)
 					if err != nil {
 						log.Error("Query notify withdraw fail", "err", err)
-						return err
 					}
 					/*查出应通知的内部交易*/
 					needNotifyInternals, err := nf.db.Internals.QueryNotifyInternal(businessId)
 					if err != nil {
 						log.Error("Query notify internal fail", "err", err)
-						return err
 					}
-					// BeforeRequest: 更新通知前状态
-					err = nf.BeforeAfterNotify(businessId, true, false, needNotifyDeposits, needNotifyWithdraws, needNotifyInternals)
-					if err != nil {
-						log.Error("Before notify update status  fail", "err", err)
-						return err
-					}
+
 					/*构建通知请求体*/
 					notifyRequest, err := nf.BuildNotifyTransaction(needNotifyDeposits, needNotifyWithdraws, needNotifyInternals)
 					if err != nil {
 						log.Error("Build notify transaction fail", "err", err)
-						return err
 					}
-					if notifyRequest.Txn == nil {
+					if notifyRequest.Txn == nil || len(notifyRequest.Txn) == 0 {
 						log.Warn("no notify transaction to notify, wait for notify")
 						continue
 					}
@@ -118,15 +109,13 @@ func (nf *Notifier) Start() error {
 					notify, err := nf.notifier[businessId].BusinessNotify(notifyRequest)
 					if err != nil {
 						log.Error("notify business platform fail", "err", err)
-						return err
+					}
+					log.Info("==================", "business", businessId, "notify", notify, "deposits", needNotifyDeposits, "err", err)
+					err = nf.AfterNotify(businessId, notify, needNotifyDeposits, needNotifyWithdraws, needNotifyInternals)
+					if err != nil {
+						log.Error("change notified status fail", "err", err)
 					}
 
-					// AfterRequest：更新通知后状态
-					err = nf.BeforeAfterNotify(businessId, false, notify, needNotifyDeposits, needNotifyWithdraws, needNotifyInternals)
-					if err != nil {
-						log.Error("After notify update status fail", "err", err)
-						return err
-					}
 				}
 			case <-nf.resourceCtx.Done():
 				log.Info("notifier worker shutting down")
@@ -134,6 +123,55 @@ func (nf *Notifier) Start() error {
 			}
 		}
 	})
+	return nil
+}
+
+/*通知之前：更新通知前状态*/
+func (nf *Notifier) AfterNotify(businessId string, notifySuccess bool, deposits []*database.Deposits, withdraws []*database.Withdraws, internals []*database.Internals) error {
+	if !notifySuccess {
+		log.Warn("notify business platform fail", "business", businessId)
+		return fmt.Errorf("notify business platform fail, businessId: %v", businessId)
+	}
+	depositsNotifyStatus := constant.TxStatusNotified
+	withdrawNotifyStatus := constant.TxStatusNotified
+	internalNotifyStatus := constant.TxStatusNotified
+
+	// 过滤状态为 0 的交易
+	var updateStutusDepositTxn []*database.Deposits
+	for _, deposit := range deposits {
+		if deposit.Status != constant.TxStatusCreateUnsigned {
+			updateStutusDepositTxn = append(updateStutusDepositTxn, deposit)
+		}
+	}
+	/*更新通知前状态（待通知）*/
+	retryStrategy := &retry.ExponentialStrategy{Min: 1000, Max: 20_000, MaxJitter: 250}
+	if _, err := retry.Do[interface{}](nf.resourceCtx, 10, retryStrategy, func() (interface{}, error) {
+		if err := nf.db.Transaction(func(tx *database.DB) error {
+			if len(deposits) > 0 {
+				if err := tx.Deposits.UpdateDepositsStatusByTxHash(businessId, depositsNotifyStatus, updateStutusDepositTxn); err != nil {
+					return err
+				}
+			}
+			if len(withdraws) > 0 {
+				if err := tx.Withdraws.UpdateWithdrawStatusByTxHash(businessId, withdrawNotifyStatus, withdraws); err != nil {
+					return err
+				}
+			}
+
+			if len(internals) > 0 {
+				if err := tx.Internals.UpdateInternalStatusByTxHash(businessId, internalNotifyStatus, internals); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Error("unable to persist batch", "err", err)
+			return nil, err
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 

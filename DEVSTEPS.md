@@ -950,7 +950,9 @@ func (fb *Fallback) findFallbackEntry(fallbackBlockHeader *rpcclient.BlockHeader
 
 ## 通知业务测试
 1. 写个程序用于模拟项目方（钱包层）接收通知
+```go
 
+```
 2. 启动这个模拟程序
 
 3. 充值一笔试试，等待 10 个确认位

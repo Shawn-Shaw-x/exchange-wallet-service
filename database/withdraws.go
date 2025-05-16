@@ -256,7 +256,7 @@ func (db *withdrawsDB) UpdateWithdrawListById(requestId string, withdrawsList []
 func (db *withdrawsDB) QueryNotifyWithdraws(requestId string) ([]*Withdraws, error) {
 	var notifyWithdraws []*Withdraws
 	result := db.gorm.Table("withdraws_"+requestId).
-		Where("status = ? or status = ?", constant.TxStatusWalletDone, constant.TxStatusNotified).
+		Where("status = ?", constant.TxStatusWalletDone).
 		Find(&notifyWithdraws)
 
 	if result.Error != nil {

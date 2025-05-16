@@ -228,7 +228,7 @@ func (db *internalsDB) HandleFallBackInternals(requestId string, startBlock, End
 func (db *internalsDB) QueryNotifyInternal(requestId string) ([]*Internals, error) {
 	var notifyInternals []*Internals
 	result := db.gorm.Table("internals_"+requestId).
-		Where("status = ? or status = ?", constant.TxStatusWalletDone, constant.TxStatusNotified).
+		Where("status = ? ", constant.TxStatusWalletDone).
 		Find(&notifyInternals)
 	if result.Error != nil {
 		return nil, result.Error
