@@ -108,6 +108,8 @@ make test
 
 ### 整体架构图
 
+![img.png](images/allStruct.png)
+
 
 ### 一笔 withdraw 交易的流程图
 
